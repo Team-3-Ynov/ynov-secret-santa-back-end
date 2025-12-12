@@ -131,7 +131,7 @@ export const AuthController = {
       console.error('Erreur lors de la récupération du profil:', error);
       res.status(500).json({
         success: false,
-        message: 'Erreur serveur',
+        message: 'Erreur serveur lors de la récupération du profil',
       });
     }
   },
