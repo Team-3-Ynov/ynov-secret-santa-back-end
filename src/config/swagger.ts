@@ -168,23 +168,6 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
-        HealthResponse: {
-          type: 'object',
-          properties: {
-            status: {
-              type: 'string',
-              example: 'OK',
-            },
-            database: {
-              type: 'string',
-              example: 'Connected',
-            },
-            timestamp: {
-              type: 'string',
-              format: 'date-time',
-            },
-          },
-        },
       },
     },
     tags: [

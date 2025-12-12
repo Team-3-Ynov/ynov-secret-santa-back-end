@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import express, { Request, Response } from 'express';
 import swaggerUi from 'swagger-ui-express';
-import { pool } from './config/database';
 import { swaggerSpec } from './config/swagger';
 import authRoutes from './routes/auth.routes';
 
@@ -55,16 +54,10 @@ app.get('/', (req: Request, res: Response) => {
  *     tags:
  *       - Health
  *     summary: Vérifier l'état de l'API
- *     description: Vérifie la connexion à la base de données
+ *     description: Retourne OK si l'API est fonctionnelle
  *     responses:
  *       200:
- *         description: API et base de données fonctionnelles
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/HealthResponse'
- *       500:
- *         description: Erreur de connexion à la base de données
+ *         description: API fonctionnelle
  *         content:
  *           application/json:
  *             schema:
@@ -72,28 +65,10 @@ app.get('/', (req: Request, res: Response) => {
  *               properties:
  *                 status:
  *                   type: string
- *                   example: ERROR
- *                 database:
- *                   type: string
- *                   example: Disconnected
- *                 error:
- *                   type: string
+ *                   example: OK
  */
-app.get('/health', async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({ 
-      status: 'OK', 
-      database: 'Connected',
-      timestamp: result.rows[0].now 
-    });
-  } catch (error) {
-    res.status(500).json({ 
-      status: 'ERROR', 
-      database: 'Disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'OK' });
 });
 
 // Routes API
