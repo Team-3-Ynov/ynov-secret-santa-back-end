@@ -40,14 +40,9 @@ export const UserModel = {
       return null;
     }
 
-    // Retourne l'utilisateur SANS le password
-    return {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-    };
+    // Destructure pour exclure password (s'adapte si le schema User change)
+    const { password: _, ...safeUser } = user;
+    return safeUser;
   },
 
   /**
