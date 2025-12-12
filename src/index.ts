@@ -1,5 +1,6 @@
 import express, { Request, Response } from 'express';
 import { pool } from './config/database';
+import { createEventHandler } from './controllers/eventController';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -17,22 +18,24 @@ app.get('/', (req: Request, res: Response) => {
 app.get('/health', async (req: Request, res: Response) => {
   try {
     const result = await pool.query('SELECT NOW()');
-    res.json({ 
-      status: 'OK', 
+    res.json({
+      status: 'OK',
       database: 'Connected',
-      timestamp: result.rows[0].now 
+      timestamp: result.rows[0].now
     });
   } catch (error) {
-    res.status(500).json({ 
-      status: 'ERROR', 
+    res.status(500).json({
+      status: 'ERROR',
       database: 'Disconnected',
       error: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
 
+// Route pour créer un évènement
+app.post('/events', createEventHandler);
+
 // Démarrage du serveur
 app.listen(PORT, () => {
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
 });
-
