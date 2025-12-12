@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
 import { AuthController } from '../../controllers/auth.controller';
 import { UserModel } from '../../models/user.model';
 import * as jwtUtils from '../../utils/jwt.utils';
 
 // Mock des dépendances
 jest.mock('../../models/user.model');
-jest.mock('bcrypt');
 jest.mock('../../utils/jwt.utils');
 
 describe('AuthController', () => {
@@ -50,7 +48,6 @@ describe('AuthController', () => {
       
       (UserModel.emailExists as jest.Mock).mockResolvedValue(false);
       (UserModel.usernameExists as jest.Mock).mockResolvedValue(false);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
       (UserModel.create as jest.Mock).mockResolvedValue(mockUser);
       (jwtUtils.generateToken as jest.Mock).mockReturnValue('mock-jwt-token');
 
@@ -58,10 +55,9 @@ describe('AuthController', () => {
 
       expect(UserModel.emailExists).toHaveBeenCalledWith(validRegistrationData.email);
       expect(UserModel.usernameExists).toHaveBeenCalledWith(validRegistrationData.username);
-      expect(bcrypt.hash).toHaveBeenCalledWith(validRegistrationData.password, 10);
       expect(UserModel.create).toHaveBeenCalledWith({
         email: validRegistrationData.email,
-        password: 'hashed_password',
+        password: validRegistrationData.password,
         username: validRegistrationData.username,
       });
       expect(statusMock).toHaveBeenCalledWith(201);
@@ -127,10 +123,9 @@ describe('AuthController', () => {
       password: 'Password123',
     };
 
-    const mockUser = {
+    const mockUserWithoutPassword = {
       id: 1,
       email: 'test@example.com',
-      password: 'hashed_password',
       username: 'testuser',
       created_at: new Date(),
       updated_at: new Date(),
@@ -139,48 +134,27 @@ describe('AuthController', () => {
     it('should login successfully with valid credentials', async () => {
       mockRequest.body = validLoginData;
       
-      (UserModel.findByEmail as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (UserModel.verifyCredentials as jest.Mock).mockResolvedValue(mockUserWithoutPassword);
       (jwtUtils.generateToken as jest.Mock).mockReturnValue('mock-jwt-token');
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
 
-      expect(UserModel.findByEmail).toHaveBeenCalledWith(validLoginData.email);
-      expect(bcrypt.compare).toHaveBeenCalledWith(validLoginData.password, mockUser.password);
+      expect(UserModel.verifyCredentials).toHaveBeenCalledWith(validLoginData.email, validLoginData.password);
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
         message: 'Connexion réussie',
         data: {
-          user: expect.objectContaining({
-            id: mockUser.id,
-            email: mockUser.email,
-            username: mockUser.username,
-          }),
+          user: mockUserWithoutPassword,
           token: 'mock-jwt-token',
         },
       });
     });
 
-    it('should return 401 if user not found', async () => {
+    it('should return 401 if credentials are invalid', async () => {
       mockRequest.body = validLoginData;
       
-      (UserModel.findByEmail as jest.Mock).mockResolvedValue(null);
-
-      await AuthController.login(mockRequest as Request, mockResponse as Response);
-
-      expect(statusMock).toHaveBeenCalledWith(401);
-      expect(jsonMock).toHaveBeenCalledWith({
-        success: false,
-        message: 'Email ou mot de passe incorrect',
-      });
-    });
-
-    it('should return 401 if password is incorrect', async () => {
-      mockRequest.body = validLoginData;
-      
-      (UserModel.findByEmail as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      (UserModel.verifyCredentials as jest.Mock).mockResolvedValue(null);
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
 
@@ -194,7 +168,7 @@ describe('AuthController', () => {
     it('should return 500 on database error', async () => {
       mockRequest.body = validLoginData;
       
-      (UserModel.findByEmail as jest.Mock).mockRejectedValue(new Error('DB Error'));
+      (UserModel.verifyCredentials as jest.Mock).mockRejectedValue(new Error('DB Error'));
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
 
@@ -208,8 +182,7 @@ describe('AuthController', () => {
     it('should not return password in response', async () => {
       mockRequest.body = validLoginData;
       
-      (UserModel.findByEmail as jest.Mock).mockResolvedValue(mockUser);
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (UserModel.verifyCredentials as jest.Mock).mockResolvedValue(mockUserWithoutPassword);
       (jwtUtils.generateToken as jest.Mock).mockReturnValue('mock-jwt-token');
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
@@ -268,4 +241,3 @@ describe('AuthController', () => {
     });
   });
 });
-

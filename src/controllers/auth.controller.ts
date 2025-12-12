@@ -1,10 +1,7 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
 import { UserModel } from '../models/user.model';
 import { generateToken } from '../utils/jwt.utils';
 import { RegisterInput, LoginInput } from '../schemas/auth.schema';
-
-const SALT_ROUNDS = 10;
 
 export const AuthController = {
   /**
@@ -35,13 +32,10 @@ export const AuthController = {
         return;
       }
 
-      // Hasher le mot de passe
-      const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-
-      // Créer l'utilisateur
+      // Créer l'utilisateur (le hash du password est géré dans le modèle)
       const user = await UserModel.create({
         email,
-        password: hashedPassword,
+        password,
         username,
       });
 
@@ -73,8 +67,8 @@ export const AuthController = {
     try {
       const { email, password }: LoginInput = req.body;
 
-      // Trouver l'utilisateur par email
-      const user = await UserModel.findByEmail(email);
+      // Vérifier les identifiants (le password reste dans le modèle)
+      const user = await UserModel.verifyCredentials(email, password);
       if (!user) {
         res.status(401).json({
           success: false,
@@ -83,33 +77,14 @@ export const AuthController = {
         return;
       }
 
-      // Vérifier le mot de passe
-      const isPasswordValid = await bcrypt.compare(password, user.password);
-      if (!isPasswordValid) {
-        res.status(401).json({
-          success: false,
-          message: 'Email ou mot de passe incorrect',
-        });
-        return;
-      }
-
-      // Créer un objet utilisateur sans le mot de passe
-      const userWithoutPassword = {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-      };
-
       // Générer le token JWT
-      const token = generateToken(userWithoutPassword);
+      const token = generateToken(user);
 
       res.status(200).json({
         success: true,
         message: 'Connexion réussie',
         data: {
-          user: userWithoutPassword,
+          user,
           token,
         },
       });

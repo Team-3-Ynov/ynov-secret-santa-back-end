@@ -1,28 +1,53 @@
 import { pool } from '../config/database';
+import bcrypt from 'bcrypt';
 import { User, CreateUserDTO, UserWithoutPassword } from '../types/user.types';
+
+const SALT_ROUNDS = 10;
 
 export const UserModel = {
   /**
    * Crée un nouvel utilisateur dans la base de données
+   * Le mot de passe est hashé automatiquement
    */
   async create(userData: CreateUserDTO): Promise<UserWithoutPassword> {
+    // Hash du mot de passe (reste dans le modèle)
+    const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
+
     const query = `
       INSERT INTO users (email, password, username)
       VALUES ($1, $2, $3)
       RETURNING id, email, username, created_at, updated_at
     `;
-    const values = [userData.email, userData.password, userData.username];
+    const values = [userData.email, hashedPassword, userData.username];
     const result = await pool.query(query, values);
     return result.rows[0];
   },
 
   /**
-   * Trouve un utilisateur par son email
+   * Vérifie les identifiants et retourne l'utilisateur (sans password)
    */
-  async findByEmail(email: string): Promise<User | null> {
+  async verifyCredentials(email: string, password: string): Promise<UserWithoutPassword | null> {
     const query = 'SELECT * FROM users WHERE email = $1';
     const result = await pool.query(query, [email]);
-    return result.rows[0] || null;
+    const user: User | undefined = result.rows[0];
+
+    if (!user) {
+      return null;
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return null;
+    }
+
+    // Retourne l'utilisateur SANS le password
+    return {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+    };
   },
 
   /**
