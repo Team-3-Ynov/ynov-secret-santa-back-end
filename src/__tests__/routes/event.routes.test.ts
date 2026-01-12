@@ -11,6 +11,16 @@ jest.mock('../../middlewares/auth.middleware', () => ({
 }));
 
 // Mock de la couche service pour ne pas toucher la BDD
+const mockEvent = {
+  id: 'event-uuid-123',
+  title: 'Original Title',
+  description: 'Original Description',
+  eventDate: new Date(),
+  budget: 20,
+  ownerEmail: 'test@example.com',
+  createdAt: new Date(),
+};
+
 jest.mock('../../services/eventService', () => ({
   createEvent: jest.fn().mockImplementation((payload) => Promise.resolve({
     id: 'uuid-1',
@@ -21,6 +31,12 @@ jest.mock('../../services/eventService', () => ({
     ownerEmail: payload.ownerEmail,
     createdAt: new Date(),
   })),
+  findEventById: jest.fn(),
+  updateEvent: jest.fn().mockImplementation((id, payload) => Promise.resolve({
+    ...mockEvent,
+    ...payload,
+    id,
+  })),
   createInvitation: jest.fn().mockImplementation((eventId, email) => Promise.resolve({
     id: 'invit-1',
     event_id: eventId,
@@ -28,14 +44,20 @@ jest.mock('../../services/eventService', () => ({
     status: 'pending',
     created_at: new Date(),
     updated_at: new Date(),
-  }))
+  })),
 }));
+
+const eventService = require('../../services/eventService');
 
 describe('POST /api/events', () => {
   it('should create an event when authenticated', async () => {
     const res = await request(app)
       .post('/api/events')
-      .send({ title: 'Promo Event', eventDate: new Date(Date.now() + 3600 * 1000).toISOString() })
+      .send({
+        title: 'Promo Event',
+        eventDate: new Date(Date.now() + 3600 * 1000).toISOString(),
+        ownerEmail: 'test@example.com', // Ajout de ownerEmail
+      })
       .set('Accept', 'application/json');
 
     expect(res.status).toBe(201);
@@ -47,7 +69,7 @@ describe('POST /api/events', () => {
   it('should return 400 for invalid payload', async () => {
     const res = await request(app)
       .post('/api/events')
-      .send({ title: '' })
+      .send({ title: '', ownerEmail: 'test@example.com' }) // Ajout de ownerEmail
       .set('Accept', 'application/json');
 
     expect(res.status).toBe(400);
@@ -78,3 +100,55 @@ describe('POST /api/events/:id/invite', () => {
   });
 });
 
+describe('PATCH /api/events/:id', () => {
+  beforeEach(() => {
+    // Réinitialiser les mocks avant chaque test
+    jest.clearAllMocks();
+  });
+
+  it('should update an event successfully', async () => {
+    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
+
+    const res = await request(app)
+      .patch(`/api/events/${mockEvent.id}`)
+      .send({ title: 'New Event Title' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(eventService.updateEvent).toHaveBeenCalledWith(mockEvent.id, { title: 'New Event Title' });
+    expect(res.body.data.title).toBe('New Event Title');
+  });
+
+  it('should return 404 if event not found', async () => {
+    (eventService.findEventById as jest.Mock).mockResolvedValue(null);
+
+    const res = await request(app)
+      .patch('/api/events/non-existent-id')
+      .send({ title: 'New Title' });
+
+    expect(res.status).toBe(404);
+    expect(res.body.message).toBe('Événement non trouvé.');
+  });
+
+  it('should return 403 if user is not the owner', async () => {
+    const otherUserEvent = { ...mockEvent, ownerEmail: 'another@user.com' };
+    (eventService.findEventById as jest.Mock).mockResolvedValue(otherUserEvent);
+
+    const res = await request(app)
+      .patch(`/api/events/${mockEvent.id}`)
+      .send({ title: 'New Title' });
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toBe('Vous n\'êtes pas autorisé à modifier cet événement.');
+  });
+
+  it('should return 400 for invalid data', async () => {
+    const res = await request(app)
+      .patch(`/api/events/${mockEvent.id}`)
+      .send({ budget: -50 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.errors).toBeDefined();
+  });
+});

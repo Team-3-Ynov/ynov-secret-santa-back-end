@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createEventHandler, inviteUserHandler } from '../controllers/eventController';
+import { createEventHandler, updateEventHandler, inviteUserHandler } from '../controllers/eventController';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router: Router = Router();

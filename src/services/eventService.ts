@@ -1,5 +1,5 @@
 import { pool } from '../config/database';
-import { EventRecord, NormalizedEventInput } from '../models/event';
+import { EventRecord, NormalizedEventInput, UpdateEventInput } from '../models/event';
 import { InvitationRecord } from '../models/invitation.model';
 import { randomUUID } from 'crypto';
 
@@ -48,3 +48,33 @@ export const createInvitation = async (eventId: string, email: string): Promise<
   return result.rows[0];
 };
 
+export const findEventById = async (id: string): Promise<EventRecord | null> => {
+  const result = await pool.query<EventRecord>(
+    'SELECT id, title, description, event_date AS "eventDate", budget, owner_email AS "ownerEmail", created_at AS "createdAt" FROM events WHERE id = $1',
+    [id],
+  );
+  return result.rows[0] || null;
+};
+
+export const updateEvent = async (id: string, payload: Partial<UpdateEventInput>): Promise<EventRecord | null> => {
+  const setClauses = Object.keys(payload).map((key, index) => {
+    const dbKey = key === 'eventDate' ? 'event_date' : key;
+    return `${dbKey} = $${index + 2}`;
+  });
+
+  if (setClauses.length === 0) {
+    return findEventById(id);
+  }
+
+  const query = `
+    UPDATE events
+    SET ${setClauses.join(', ')}
+    WHERE id = $1
+    RETURNING id, title, description, event_date AS "eventDate", budget, owner_email AS "ownerEmail", created_at AS "createdAt"
+  `;
+
+  const values = [id, ...Object.values(payload)];
+
+  const result = await pool.query<EventRecord>(query, values);
+  return result.rows[0] || null;
+};
