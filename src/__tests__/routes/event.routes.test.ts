@@ -45,12 +45,6 @@ jest.mock('../../services/eventService', () => ({
     created_at: new Date(),
     updated_at: new Date(),
   })),
-  findEventById: jest.fn(),
-  updateEvent: jest.fn().mockImplementation((id, payload) => Promise.resolve({
-    ...mockEvent,
-    ...payload,
-    id,
-  })),
 }));
 
 const eventService = require('../../services/eventService');
