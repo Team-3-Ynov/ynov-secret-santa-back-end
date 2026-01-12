@@ -3,7 +3,7 @@ import { AuthController } from '../controllers/auth.controller';
 import { validate } from '../middlewares/validation.middleware';
 import { registerSchema, loginSchema } from '../schemas/auth.schema';
 
-const router = Router();
+const router: Router = Router();
 
 // POST /api/auth/register - Créer un compte utilisateur
 router.post('/register', validate(registerSchema), AuthController.register);

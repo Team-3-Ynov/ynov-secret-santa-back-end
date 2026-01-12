@@ -117,9 +117,13 @@ networks:
   app-network:
     driver: bridge
 
-# ═══════════════════════════════════════════════════════════════
-# Volumes
-# ═══════════════════════════════════════════════════════════════
+  mailhog:
+    image: mailhog/mailhog
+    container_name: secret_santa_mailhog
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI
+
 volumes:
   postgres_data:
     driver: local
