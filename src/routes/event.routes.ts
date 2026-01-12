@@ -46,4 +46,7 @@ router.post('/', authenticate, createEventHandler);
  */
 router.post('/:id/invite', authenticate, inviteUserHandler);
 
+// PATCH /api/events/:id - Mettre à jour un événement (authentifié)
+router.patch('/:id', authenticate, updateEventHandler);
+
 export default router;
