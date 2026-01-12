@@ -4,7 +4,6 @@ import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import authRoutes from './routes/auth.routes';
 import eventRoutes from './routes/event.routes';
-import { createEventHandler } from './controllers/eventController';
 
 const app: Express = express();
 
