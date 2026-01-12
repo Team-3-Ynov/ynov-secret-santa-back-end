@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { invitationSchema } from '../models/invitation.model';
-import { sendInvitationEmail } from '../services/emailService';
 import { createEvent, findEventById, updateEvent, createInvitation } from '../services/eventService';
 import { validateEventInput, updateEventSchema } from '../models/event';
+import { invitationSchema } from '../models/invitation.model';
+import { sendInvitationEmail } from '../services/emailService';
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // Utiliser l'email de l'utilisateur authentifié si disponible (ajoutée par le middleware d'authentification)
