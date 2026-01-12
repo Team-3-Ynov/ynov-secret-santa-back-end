@@ -1,11 +1,28 @@
 // Types et helpers liés aux évènements Secret Santa
-export interface EventInput {
-  title: string;
-  description?: string;
-  eventDate: string;
-  budget?: number;
-  ownerEmail: string;
-}
+import { z } from 'zod';
+
+// DTO Zod pour la création d'un évènement
+export const eventSchema = z.object({
+  title: z.string().min(1, { message: 'Le titre est requis.' }).transform((s) => s.trim()),
+  description: z.string().optional().transform((s) => (s ? s.trim() : undefined)),
+  eventDate: z.string()
+    .refine((val) => {
+      const d = new Date(val);
+      return !Number.isNaN(d.getTime());
+    }, { message: "La date de l'évènement doit être au format ISO." })
+    .refine((val) => {
+      const d = new Date(val);
+      return d.getTime() > Date.now();
+    }, { message: "La date de l'évènement doit être dans le futur." }),
+  budget: z
+    .union([z.number(), z.string()])
+    .optional()
+    .refine((v) => v === undefined || (!Number.isNaN(Number(v)) && Number(v) >= 0), { message: 'Le budget doit être un nombre positif.' })
+    .transform((v) => (v === undefined ? undefined : Number(v))),
+  ownerEmail: z.string().email({ message: 'Un email propriétaire valide est requis.' }).transform((s) => s.trim().toLowerCase()),
+});
+
+export type EventInput = z.infer<typeof eventSchema>;
 
 export interface NormalizedEventInput {
   title: string;
@@ -20,57 +37,26 @@ export interface EventRecord extends NormalizedEventInput {
   createdAt: Date;
 }
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const validateEventInput = (payload: unknown) => {
+  const parsed = eventSchema.safeParse(payload);
 
-export const validateEventInput = (payload: Partial<EventInput>) => {
-  const errors: string[] = [];
-
-  const title = payload.title?.trim();
-  if (!title) {
-    errors.push('Le titre est requis.');
-  }
-
-  const ownerEmail = payload.ownerEmail?.trim().toLowerCase();
-  if (!ownerEmail || !EMAIL_REGEX.test(ownerEmail)) {
-    errors.push('Un email propriétaire valide est requis.');
-  }
-
-  let eventDate: Date | undefined;
-  if (!payload.eventDate) {
-    errors.push('La date de l\'évènement est requise.');
-  } else {
-    const parsedDate = new Date(payload.eventDate);
-    if (Number.isNaN(parsedDate.getTime())) {
-      errors.push('La date de l\'évènement doit être au format ISO.');
-    } else if (parsedDate.getTime() < Date.now()) {
-      errors.push('La date de l\'évènement doit être dans le futur.');
-    } else {
-      eventDate = parsedDate;
-    }
-  }
-
-  let budget: number | undefined;
-  if (payload.budget !== undefined) {
-    const numericBudget = Number(payload.budget);
-    if (Number.isNaN(numericBudget) || numericBudget < 0) {
-      errors.push('Le budget doit être un nombre positif.');
-    } else {
-      budget = numericBudget;
-    }
-  }
-
-  if (errors.length > 0 || !title || !ownerEmail || !eventDate) {
+  if (!parsed.success) {
+    const errors = parsed.error.issues.map((issue) => ({
+      field: issue.path.join('.') || 'root',
+      message: issue.message,
+    }));
     return { errors } as const;
   }
 
+  // Normaliser les données pour correspondre à NormalizedEventInput
+  const value = parsed.data;
   const normalized: NormalizedEventInput = {
-    title,
-    description: payload.description?.trim() || undefined,
-    eventDate,
-    budget,
-    ownerEmail,
+    title: value.title,
+    description: value.description === '' ? undefined : value.description,
+    eventDate: new Date(value.eventDate),
+    budget: value.budget as number | undefined,
+    ownerEmail: value.ownerEmail,
   };
 
   return { data: normalized } as const;
 };
-

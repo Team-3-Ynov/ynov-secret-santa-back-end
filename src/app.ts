@@ -24,10 +24,6 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-app.get('/', (req, res) => {
-  res.json({ message: 'Bienvenue sur l\'API Secret Santa! 🎅' });
-});
-
 app.get('/health', (req, res) => {
   res.json({ status: 'OK' });
 });
@@ -35,8 +31,5 @@ app.get('/health', (req, res) => {
 // Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
-
-// Route legacy
-app.post('/events', createEventHandler);
 
 export default app;
