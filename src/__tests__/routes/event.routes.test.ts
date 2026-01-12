@@ -20,6 +20,14 @@ jest.mock('../../services/eventService', () => ({
     budget: payload.budget ?? null,
     ownerEmail: payload.ownerEmail,
     createdAt: new Date(),
+  })),
+  createInvitation: jest.fn().mockImplementation((eventId, email) => Promise.resolve({
+    id: 'invit-1',
+    event_id: eventId,
+    email: email,
+    status: 'pending',
+    created_at: new Date(),
+    updated_at: new Date(),
   }))
 }));
 
@@ -44,6 +52,29 @@ describe('POST /api/events', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
+  });
+});
+
+describe('POST /api/events/:id/invite', () => {
+  it('should invite a user successfully', async () => {
+    const res = await request(app)
+      .post('/api/events/uuid-1/invite')
+      .send({ email: 'guest@example.com' })
+      .set('Accept', 'application/json');
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty('id', 'invit-1');
+    expect(res.body.email).toBe('guest@example.com');
+  });
+
+  it('should return 400 if email is invalid', async () => {
+    const res = await request(app)
+      .post('/api/events/uuid-1/invite')
+      .send({ email: 'invalid-email' })
+      .set('Accept', 'application/json');
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Email invalide');
   });
 });
 

@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express, { Express } from 'express';
+import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
 import authRoutes from './routes/auth.routes';
@@ -8,6 +9,7 @@ import eventRoutes from './routes/event.routes';
 const app: Express = express();
 
 // Middleware
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -257,3 +257,33 @@ docker-compose down -v
 docker-compose up -d
 ```
 
+
+## 📧 Test des Emails
+
+### Avec MailHog (Local)
+
+Pour tester l'envoi d'emails sans utiliser de véritable adresse, ce projet utilise [MailHog](https://github.com/mailhog/MailHog).
+
+1.  Démarrer les services Docker (Postgres + MailHog) :
+    ```bash
+    docker-compose up -d
+    ```
+2.  Accéder à l'interface MailHog : [http://localhost:8025](http://localhost:8025)
+3.  Vérifier que le fichier `.env` est configuré pour MailHog (par défaut) :
+    ```env
+    SMTP_HOST=localhost
+    SMTP_PORT=1025
+    SMTP_USER=test
+    SMTP_PASS=test
+    ```
+
+### Envoyer un Email de Test
+
+Un script utilitaire est disponible pour vérifier rapidement la configuration :
+
+```bash
+# Envoyer un email de test à une adresse spécifiée
+npx ts-node src/scripts/send-test-email.ts
+```
+
+L'email apparaîtra dans l'interface MailHog (si configuré) ou sera envoyé réellement (si configuration SMTP réelle).
