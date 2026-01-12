@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createEventHandler, updateEventHandler } from '../controllers/eventController';
+import { createEventHandler, inviteUserHandler, updateEventHandler } from '../controllers/eventController';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router: Router = Router();
@@ -42,16 +42,15 @@ const router: Router = Router();
  *       500:
  *         description: Erreur serveur
  */
-// router.post('/', authenticate, createEventHandler); // Authentification désactivée pour le dev
-router.post('/', createEventHandler);
+router.post('/', authenticate, createEventHandler);
 
 /**
  * @openapi
- * /api/events/{id}:
- *   patch:
+ * /api/events/{id}/invite:
+ *   post:
  *     tags:
  *       - Events
- *     summary: Mettre à jour un évènement
+ *     summary: Inviter un utilisateur à un évènement
  *     security:
  *       - bearerAuth: []
  *     parameters:
@@ -60,22 +59,28 @@ router.post('/', createEventHandler);
  *         required: true
  *         schema:
  *           type: string
- *           format: uuid
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateEventInput'
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *             required:
+ *               - email
  *     responses:
- *       200:
- *         description: Evènement mis à jour
+ *       201:
+ *         description: Invitation créée
  *       400:
- *         description: Données invalides
- *       403:
- *         description: Accès refusé
- *       404:
- *         description: Evènement non trouvé
+ *         description: Email invalide
+ *       401:
+ *         description: Non authentifié
+ *       500:
+ *         description: Erreur serveur
  */
-router.patch('/:id', authenticate, updateEventHandler);
+router.post('/:id/invite', authenticate, inviteUserHandler);
 
 export default router;

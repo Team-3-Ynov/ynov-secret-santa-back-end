@@ -5,16 +5,21 @@ import * as path from 'path';
 
 async function runMigrations() {
   console.log('🔄 Exécution des migrations...');
-  
+
   try {
-    // Lire le fichier de migration
-    const migrationPath = path.join(__dirname, '../../database/migrations/001_create_users_table.sql');
-    const sql = fs.readFileSync(migrationPath, 'utf8');
-    
-    // Exécuter la migration
-    await pool.query(sql);
-    
-    console.log('✅ Migrations exécutées avec succès!');
+    const migrationsDir = path.join(__dirname, '../../database/migrations');
+    const files = fs.readdirSync(migrationsDir).sort();
+
+    for (const file of files) {
+      if (file.endsWith('.sql')) {
+        console.log(`▶️ Migration: ${file}`);
+        const migrationPath = path.join(migrationsDir, file);
+        const sql = fs.readFileSync(migrationPath, 'utf8');
+        await pool.query(sql);
+      }
+    }
+
+    console.log('✅ Toutes les migrations ont été exécutées avec succès!');
   } catch (error) {
     console.error('❌ Erreur lors des migrations:', error);
     process.exit(1);
