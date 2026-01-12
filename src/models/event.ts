@@ -22,6 +22,15 @@ export const eventSchema = z.object({
   ownerEmail: z.string().email({ message: 'Un email propriétaire valide est requis.' }).transform((s) => s.trim().toLowerCase()),
 });
 
+export const updateEventSchema = eventSchema.pick({
+  title: true,
+  description: true,
+  eventDate: true,
+  budget: true,
+}).partial();
+
+export type UpdateEventInput = z.infer<typeof updateEventSchema>;
+
 export type EventInput = z.infer<typeof eventSchema>;
 
 export interface NormalizedEventInput {

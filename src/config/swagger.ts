@@ -25,7 +25,7 @@ function loadPaths(): Record<string, unknown> {
 
   if (fs.existsSync(pathsDir)) {
     const files = fs.readdirSync(pathsDir).filter(f => f.endsWith('.yaml'));
-    
+
     for (const file of files) {
       const filePath = path.join(pathsDir, file);
       const content = loadYaml(filePath);
@@ -49,25 +49,25 @@ function resolveRefs(obj: unknown, baseSpec: Record<string, unknown>): unknown {
   }
 
   const record = obj as Record<string, unknown>;
-  
+
   if ('$ref' in record && typeof record.$ref === 'string') {
     const ref = record.$ref;
-    
+
     // Résout les références vers openapi.yaml#/components/...
     if (ref.includes('openapi.yaml#/components/')) {
       const componentPath = ref.split('#/components/')[1];
       const parts = componentPath.split('/');
-      
+
       let resolved: unknown = baseSpec.components;
       for (const part of parts) {
         if (resolved && typeof resolved === 'object') {
           resolved = (resolved as Record<string, unknown>)[part];
         }
       }
-      
+
       return { $ref: `#/components/${componentPath}` };
     }
-    
+
     return record;
   }
 
@@ -75,7 +75,7 @@ function resolveRefs(obj: unknown, baseSpec: Record<string, unknown>): unknown {
   for (const [key, value] of Object.entries(record)) {
     result[key] = resolveRefs(value, baseSpec);
   }
-  
+
   return result;
 }
 
@@ -85,13 +85,13 @@ function resolveRefs(obj: unknown, baseSpec: Record<string, unknown>): unknown {
 function buildSwaggerSpec(): Record<string, unknown> {
   // Charge le fichier principal
   const mainSpec = loadYaml(path.join(docsPath, 'openapi.yaml'));
-  
+
   // Charge tous les paths
   const paths = loadPaths();
-  
+
   // Résout les références
   const resolvedPaths = resolveRefs(paths, mainSpec);
-  
+
   // Combine tout
   return {
     ...mainSpec,
