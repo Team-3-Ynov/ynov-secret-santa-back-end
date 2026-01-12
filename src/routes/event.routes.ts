@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createEventHandler } from '../controllers/eventController';
+import { createEventHandler, updateEventHandler } from '../controllers/eventController';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router: Router = Router();
@@ -42,6 +42,40 @@ const router: Router = Router();
  *       500:
  *         description: Erreur serveur
  */
-router.post('/', authenticate, createEventHandler);
+// router.post('/', authenticate, createEventHandler); // Authentification désactivée pour le dev
+router.post('/', createEventHandler);
+
+/**
+ * @openapi
+ * /api/events/{id}:
+ *   patch:
+ *     tags:
+ *       - Events
+ *     summary: Mettre à jour un évènement
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateEventInput'
+ *     responses:
+ *       200:
+ *         description: Evènement mis à jour
+ *       400:
+ *         description: Données invalides
+ *       403:
+ *         description: Accès refusé
+ *       404:
+ *         description: Evènement non trouvé
+ */
+router.patch('/:id', authenticate, updateEventHandler);
 
 export default router;

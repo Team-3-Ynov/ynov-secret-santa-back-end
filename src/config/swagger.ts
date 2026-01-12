@@ -168,6 +168,15 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
+        UpdateEventInput: {
+          type: 'object',
+          properties: {
+            title: { type: 'string' },
+            description: { type: 'string' },
+            eventDate: { type: 'string', format: 'date-time' },
+            budget: { type: 'number' },
+          },
+        },
       },
     },
     tags: [
@@ -178,6 +187,10 @@ const options: swaggerJsdoc.Options = {
       {
         name: 'Auth',
         description: 'Authentification et gestion des comptes',
+      },
+      {
+        name: 'Events',
+        description: 'Gestion des événements Secret Santa',
       },
     ],
   },
