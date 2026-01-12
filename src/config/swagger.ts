@@ -79,7 +79,6 @@ function resolveRefs(obj: unknown, baseSpec: Record<string, unknown>): unknown {
   return result;
 }
 
-
 /**
  * Construit la spécification OpenAPI complète
  */
