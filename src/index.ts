@@ -1,4 +1,8 @@
+import 'dotenv/config';
 import express, { Request, Response } from 'express';
+import swaggerUi from 'swagger-ui-express';
+import { swaggerSpec } from './config/swagger';
+import authRoutes from './routes/auth.routes';
 import { pool } from './config/database';
 import { createEventHandler } from './controllers/eventController';
 
@@ -9,28 +13,68 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Route de test
+// Documentation Swagger
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Secret Santa API - Documentation',
+}));
+
+// Route pour récupérer le JSON OpenAPI
+app.get('/api-docs.json', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+/**
+ * @openapi
+ * /:
+ *   get:
+ *     tags:
+ *       - Health
+ *     summary: Page d'accueil de l'API
+ *     description: Retourne un message de bienvenue
+ *     responses:
+ *       200:
+ *         description: Message de bienvenue
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: "Bienvenue sur l'API Secret Santa! 🎅"
+ */
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Bienvenue sur l\'API Secret Santa! 🎅' });
 });
 
-// Route pour tester la connexion à la base de données
-app.get('/health', async (req: Request, res: Response) => {
-  try {
-    const result = await pool.query('SELECT NOW()');
-    res.json({
-      status: 'OK',
-      database: 'Connected',
-      timestamp: result.rows[0].now
-    });
-  } catch (error) {
-    res.status(500).json({
-      status: 'ERROR',
-      database: 'Disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
+/**
+ * @openapi
+ * /health:
+ *   get:
+ *     tags:
+ *       - Health
+ *     summary: Vérifier l'état de l'API
+ *     description: Retourne OK si l'API est fonctionnelle
+ *     responses:
+ *       200:
+ *         description: API fonctionnelle
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: OK
+ */
+app.get('/health', (req: Request, res: Response) => {
+  res.json({ status: 'OK' });
 });
+
+// Routes API
+app.use('/api/auth', authRoutes);
 
 // Route pour créer un évènement
 app.post('/events', createEventHandler);
@@ -38,4 +82,6 @@ app.post('/events', createEventHandler);
 // Démarrage du serveur
 app.listen(PORT, () => {
   console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
+  console.log(`📚 Documentation Swagger: http://localhost:${PORT}/api-docs`);
 });
+
