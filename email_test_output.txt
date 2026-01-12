@@ -1,4 +1,0 @@
-ÔÜá´©Å SMTP credentials not found. Email not sent.
-­ƒÜÇ Tentative d'envoi d'email ├á twittel.canada@gmail.com...
-[MOCK EMAIL] To: twittel.canada@gmail.com, Subject: Invitation Secret Santa, Link: http://localhost:3000/events/test-id/join
-Ô£à Script termin├® sans erreur (V├®rifiez si l'email a ├®t├® envoy├® ou logg├®).

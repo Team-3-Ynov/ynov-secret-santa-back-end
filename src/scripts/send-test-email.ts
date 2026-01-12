@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { sendInvitationEmail } from '../services/emailService';
 
 async function main() {
-    const targetEmail = 'prout.caca@yopmail.com';
+    const targetEmail = 'test.test@yopmail.com';
     console.log(`🚀 Tentative d'envoi d'email à ${targetEmail}...`);
 
     try {
