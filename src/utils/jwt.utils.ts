@@ -2,33 +2,64 @@ import jwt from 'jsonwebtoken';
 import { UserWithoutPassword } from '../types/user.types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh-secret-change-in-production';
 
-export interface JwtPayload {
+const ACCESS_TOKEN_EXPIRES_IN = '15m'; // 15 minutes
+const REFRESH_TOKEN_EXPIRES_IN = '7d'; // 7 jours
+
+export interface AccessTokenPayload {
   userId: number;
   email: string;
+  type: 'access';
+}
+
+export interface RefreshTokenPayload {
+  userId: number;
+  type: 'refresh';
 }
 
 /**
- * Génère un token JWT pour un utilisateur
+ * Génère un Access Token (courte durée)
  */
-export const generateToken = (user: UserWithoutPassword): string => {
-  const payload: JwtPayload = {
+export const signAccessToken = (user: UserWithoutPassword): string => {
+  const payload: AccessTokenPayload = {
     userId: user.id,
     email: user.email,
+    type: 'access',
   };
 
-  // @ts-ignore - expiresIn accepts string like '7d'
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_EXPIRES_IN });
 };
 
 /**
- * Vérifie et décode un token JWT
+ * Génère un Refresh Token (longue durée)
  */
-export const verifyToken = (token: string): JwtPayload | null => {
+export const signRefreshToken = (userId: number): string => {
+  const payload: RefreshTokenPayload = {
+    userId,
+    type: 'refresh',
+  };
+
+  return jwt.sign(payload, REFRESH_TOKEN_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRES_IN });
+};
+
+/**
+ * Vérifie un Access Token
+ */
+export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    return decoded;
+    return jwt.verify(token, JWT_SECRET) as AccessTokenPayload;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Vérifie un Refresh Token
+ */
+export const verifyRefreshToken = (token: string): RefreshTokenPayload | null => {
+  try {
+    return jwt.verify(token, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
   } catch (error) {
     return null;
   }

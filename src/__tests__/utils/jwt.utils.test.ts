@@ -1,4 +1,4 @@
-import { generateToken, verifyToken, extractTokenFromHeader } from '../../utils/jwt.utils';
+import { signAccessToken, verifyAccessToken, extractTokenFromHeader } from '../../utils/jwt.utils';
 import { UserWithoutPassword } from '../../types/user.types';
 
 describe('JWT Utils', () => {
@@ -10,10 +10,10 @@ describe('JWT Utils', () => {
     updated_at: new Date(),
   };
 
-  describe('generateToken', () => {
+  describe('signAccessToken', () => {
     it('should generate a valid JWT token', () => {
-      const token = generateToken(mockUser);
-      
+      const token = signAccessToken(mockUser);
+
       expect(token).toBeDefined();
       expect(typeof token).toBe('string');
       expect(token.split('.')).toHaveLength(3); // JWT has 3 parts
@@ -26,17 +26,17 @@ describe('JWT Utils', () => {
         email: 'other@example.com',
       };
 
-      const token1 = generateToken(mockUser);
-      const token2 = generateToken(anotherUser);
+      const token1 = signAccessToken(mockUser);
+      const token2 = signAccessToken(anotherUser);
 
       expect(token1).not.toBe(token2);
     });
   });
 
-  describe('verifyToken', () => {
+  describe('verifyAccessToken', () => {
     it('should verify and decode a valid token', () => {
-      const token = generateToken(mockUser);
-      const decoded = verifyToken(token);
+      const token = signAccessToken(mockUser);
+      const decoded = verifyAccessToken(token);
 
       expect(decoded).not.toBeNull();
       expect(decoded?.userId).toBe(mockUser.id);
@@ -44,15 +44,15 @@ describe('JWT Utils', () => {
     });
 
     it('should return null for an invalid token', () => {
-      const decoded = verifyToken('invalid-token');
+      const decoded = verifyAccessToken('invalid-token');
 
       expect(decoded).toBeNull();
     });
 
     it('should return null for a tampered token', () => {
-      const token = generateToken(mockUser);
+      const token = signAccessToken(mockUser);
       const tamperedToken = token.slice(0, -5) + 'xxxxx';
-      const decoded = verifyToken(tamperedToken);
+      const decoded = verifyAccessToken(tamperedToken);
 
       expect(decoded).toBeNull();
     });

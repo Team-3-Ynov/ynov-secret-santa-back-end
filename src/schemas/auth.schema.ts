@@ -2,12 +2,13 @@ import { z } from 'zod';
 
 export const registerSchema = z.object({
   email: z
-    .string()
-    .email('Email invalide')
-    .min(1, 'Email requis'),
+    .email()
+    .min(1, 'Email requis')
+    .max(255),
   password: z
     .string()
     .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
+    .max(255, 'Le mot de passe ne peut pas dépasser 255 caractères')
     .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
     .regex(/[a-z]/, 'Le mot de passe doit contenir au moins une minuscule')
     .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre'),
@@ -20,12 +21,13 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email: z
-    .string()
-    .email('Email invalide')
-    .min(1, 'Email requis'),
+    .email()
+    .min(1)
+    .max(255),
   password: z
     .string()
-    .min(1, 'Mot de passe requis'),
+    .min(1)
+    .max(255),
 });
 
 export type RegisterInput = z.infer<typeof registerSchema>;

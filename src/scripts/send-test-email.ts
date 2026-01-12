@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { sendInvitationEmail } from '../services/emailService';
+import { sendInvitationEmail } from '../services/email.service';
 
 async function main() {
     const targetEmail = 'test.test@yopmail.com';

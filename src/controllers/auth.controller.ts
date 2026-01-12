@@ -1,7 +1,14 @@
 import { Request, Response } from 'express';
+import bcrypt from 'bcrypt';
 import { UserModel } from '../models/user.model';
-import { generateToken } from '../utils/jwt.utils';
+import { RefreshTokenModel } from '../models/refresh_token.model';
+import {
+  signAccessToken,
+  signRefreshToken,
+  verifyRefreshToken
+} from '../utils/jwt.utils';
 import { RegisterInput, LoginInput } from '../schemas/auth.schema';
+import { AuthenticatedRequest } from '../middlewares/auth.middleware';
 
 export const AuthController = {
   /**
@@ -12,50 +19,49 @@ export const AuthController = {
     try {
       const { email, password, username }: RegisterInput = req.body;
 
-      // Vérifier si l'email existe déjà
+      // Vérifications existantes...
       const emailExists = await UserModel.emailExists(email);
       if (emailExists) {
-        res.status(409).json({
-          success: false,
-          message: 'Cet email est déjà utilisé',
-        });
+        res.status(409).json({ success: false, message: 'Cet email est déjà utilisé' });
         return;
       }
 
-      // Vérifier si le username existe déjà
       const usernameExists = await UserModel.usernameExists(username);
       if (usernameExists) {
-        res.status(409).json({
-          success: false,
-          message: 'Ce nom d\'utilisateur est déjà pris',
-        });
+        res.status(409).json({ success: false, message: 'Ce nom d\'utilisateur est déjà pris' });
         return;
       }
 
-      // Créer l'utilisateur (le hash du password est géré dans le modèle)
+      // Le mot de passe sera hashé par le modèle
       const user = await UserModel.create({
         email,
         password,
         username,
       });
 
-      // Générer le token JWT
-      const token = generateToken(user);
+      // Génération des tokens
+      const accessToken = signAccessToken(user);
+      const refreshToken = signRefreshToken(user.id);
+
+      // Stockage du refresh token en base
+      // On calcule la date d'expiration (7 jours)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await RefreshTokenModel.create(user.id, refreshToken, expiresAt);
 
       res.status(201).json({
         success: true,
         message: 'Compte créé avec succès',
         data: {
           user,
-          token,
+          accessToken,
+          refreshToken
         },
       });
     } catch (error) {
       console.error('Erreur lors de l\'inscription:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur lors de l\'inscription',
-      });
+      res.status(500).json({ success: false, message: 'Erreur serveur lors de l\'inscription' });
     }
   },
 
@@ -67,33 +73,135 @@ export const AuthController = {
     try {
       const { email, password }: LoginInput = req.body;
 
-      // Vérifier les identifiants (le password reste dans le modèle)
       const user = await UserModel.verifyCredentials(email, password);
+
       if (!user) {
-        res.status(401).json({
-          success: false,
-          message: 'Email ou mot de passe incorrect',
-        });
+        res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
         return;
       }
 
-      // Générer le token JWT
-      const token = generateToken(user);
+      const userWithoutPassword = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+      };
+
+      // Génération des tokens
+      const accessToken = signAccessToken(userWithoutPassword);
+      const refreshToken = signRefreshToken(user.id);
+
+      // Stockage du refresh token en base
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await RefreshTokenModel.create(user.id, refreshToken, expiresAt);
 
       res.status(200).json({
         success: true,
         message: 'Connexion réussie',
         data: {
-          user,
-          token,
+          user: userWithoutPassword,
+          accessToken,
+          refreshToken
         },
       });
     } catch (error) {
       console.error('Erreur lors de la connexion:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur lors de la connexion',
+      res.status(500).json({ success: false, message: 'Erreur serveur lors de la connexion' });
+    }
+  },
+
+  /**
+   * Rafraîchissement du token d'accès
+   * POST /api/auth/refresh
+   */
+  async refresh(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+
+      if (!refreshToken) {
+        res.status(400).json({ success: false, message: 'Refresh token manquant' });
+        return;
+      }
+
+      // 1. Vérifier la signature du token
+      const payload = verifyRefreshToken(refreshToken);
+      if (!payload) {
+        res.status(401).json({ success: false, message: 'Refresh token invalide' });
+        return;
+      }
+
+      // 2. Vérifier si le token existe en base et n'est pas révoqué
+      const storedToken = await RefreshTokenModel.findByToken(refreshToken);
+      if (!storedToken || storedToken.revoked) {
+        // Détection de vol potentiel de refresh token !
+        // Si on tente d'utiliser un token révoqué, on invalide tout pour cet utilisateur par sécurité
+        if (storedToken && storedToken.revoked) {
+          console.warn(`Tentative de réutilisation d'un token révoqué pour userId ${payload.userId}`);
+          await RefreshTokenModel.revokeAllForUser(payload.userId);
+        }
+        res.status(401).json({ success: false, message: 'Refresh token invalide ou révoqué' });
+        return;
+      }
+
+      // 3. Vérifier l'expiration (base de données)
+      if (new Date() > storedToken.expires_at) {
+        res.status(401).json({ success: false, message: 'Refresh token expiré' });
+        return;
+      }
+
+      // 4. Générer de nouveaux tokens (Rotation)
+      const user = await UserModel.findById(payload.userId);
+      if (!user) {
+        res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+        return;
+      }
+
+      const newAccessToken = signAccessToken(user);
+      const newRefreshToken = signRefreshToken(user.id);
+
+      // 5. Invalider l'ancien token et sauver le nouveau
+      await RefreshTokenModel.revoke(refreshToken);
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      await RefreshTokenModel.create(user.id, newRefreshToken, expiresAt);
+
+      res.status(200).json({
+        success: true,
+        data: {
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken
+        }
       });
+
+    } catch (error) {
+      console.error('Erreur refresh token:', error);
+      res.status(500).json({ success: false, message: 'Erreur serveur' });
+    }
+  },
+
+  /**
+   * Déconnexion (Révocation du refresh token)
+   * POST /api/auth/logout
+   */
+  async logout(req: Request, res: Response): Promise<void> {
+    try {
+      const { refreshToken } = req.body;
+
+      if (refreshToken) {
+        await RefreshTokenModel.revoke(refreshToken);
+      }
+
+      res.status(200).json({
+        success: true,
+        message: 'Déconnexion réussie'
+      });
+    } catch (error) {
+      console.error('Erreur logout:', error);
+      res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
   },
 
@@ -103,23 +211,12 @@ export const AuthController = {
    */
   async getMe(req: Request, res: Response): Promise<void> {
     try {
-      // L'userId sera ajouté par le middleware d'authentification
-      const userId = (req as any).userId;
-
-      if (!userId) {
-        res.status(401).json({
-          success: false,
-          message: 'Non authentifié',
-        });
-        return;
-      }
+      // req.user est garanti par le middleware authenticate
+      const userId = (req as AuthenticatedRequest).user.id;
 
       const user = await UserModel.findById(userId);
       if (!user) {
-        res.status(404).json({
-          success: false,
-          message: 'Utilisateur non trouvé',
-        });
+        res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
         return;
       }
 
@@ -129,11 +226,7 @@ export const AuthController = {
       });
     } catch (error) {
       console.error('Erreur lors de la récupération du profil:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Erreur serveur lors de la récupération du profil',
-      });
+      res.status(500).json({ success: false, message: 'Erreur serveur' });
     }
   },
 };
-

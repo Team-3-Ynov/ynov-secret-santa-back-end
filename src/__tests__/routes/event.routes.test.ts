@@ -4,8 +4,8 @@ import app from '../../app';
 // Mock du middleware authenticate pour bypasser la vérification JWT en tests
 jest.mock('../../middlewares/auth.middleware', () => ({
   authenticate: (req: any, res: any, next: any) => {
-    // Injecter un email utilisateur pour simuler une authentification
-    req.userEmail = 'test@example.com';
+    // Injecter un user complet comme le fait le middleware
+    req.user = { id: 1, email: 'test@example.com' };
     next();
   }
 }));
@@ -17,18 +17,18 @@ const mockEvent = {
   description: 'Original Description',
   eventDate: new Date(),
   budget: 20,
-  ownerEmail: 'test@example.com',
+  ownerId: 1, // Changed from ownerEmail to ownerId
   createdAt: new Date(),
 };
 
-jest.mock('../../services/eventService', () => ({
+jest.mock('../../services/event.service', () => ({
   createEvent: jest.fn().mockImplementation((payload) => Promise.resolve({
     id: 'uuid-1',
     title: payload.title,
     description: payload.description ?? null,
     eventDate: payload.eventDate,
     budget: payload.budget ?? null,
-    ownerEmail: payload.ownerEmail,
+    ownerId: payload.ownerId, // Changed
     createdAt: new Date(),
   })),
   findEventById: jest.fn(),
@@ -45,9 +45,12 @@ jest.mock('../../services/eventService', () => ({
     created_at: new Date(),
     updated_at: new Date(),
   })),
+  joinEvent: jest.fn(),
+  performDraw: jest.fn(),
+  getAssignment: jest.fn(),
 }));
 
-const eventService = require('../../services/eventService');
+const eventService = require('../../services/event.service');
 
 describe('POST /api/events', () => {
   it('should create an event when authenticated', async () => {
@@ -56,20 +59,20 @@ describe('POST /api/events', () => {
       .send({
         title: 'Promo Event',
         eventDate: new Date(Date.now() + 3600 * 1000).toISOString(),
-        ownerEmail: 'test@example.com', // Ajout de ownerEmail
+        // ownerEmail removd from payload
       })
       .set('Accept', 'application/json');
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveProperty('id');
-    expect(res.body.data.ownerEmail).toBe('test@example.com');
+    expect(res.body.data.ownerId).toBe(1);
   });
 
   it('should return 400 for invalid payload', async () => {
     const res = await request(app)
       .post('/api/events')
-      .send({ title: '', ownerEmail: 'test@example.com' }) // Ajout de ownerEmail
+      .send({ title: '' }) // ownerEmail removed
       .set('Accept', 'application/json');
 
     expect(res.status).toBe(400);
@@ -110,7 +113,7 @@ describe('PATCH /api/events/:id', () => {
     (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
 
     const res = await request(app)
-      .patch(`/api/events/${mockEvent.id}`)
+      .put(`/api/events/${mockEvent.id}`) // Changed from PATCH to PUT based on routes
       .send({ title: 'New Event Title' });
 
     expect(res.status).toBe(200);
@@ -123,7 +126,7 @@ describe('PATCH /api/events/:id', () => {
     (eventService.findEventById as jest.Mock).mockResolvedValue(null);
 
     const res = await request(app)
-      .patch('/api/events/non-existent-id')
+      .put('/api/events/non-existent-id')
       .send({ title: 'New Title' });
 
     expect(res.status).toBe(404);
@@ -131,11 +134,11 @@ describe('PATCH /api/events/:id', () => {
   });
 
   it('should return 403 if user is not the owner', async () => {
-    const otherUserEvent = { ...mockEvent, ownerEmail: 'another@user.com' };
+    const otherUserEvent = { ...mockEvent, ownerId: 999 }; // Changed to ownerId
     (eventService.findEventById as jest.Mock).mockResolvedValue(otherUserEvent);
 
     const res = await request(app)
-      .patch(`/api/events/${mockEvent.id}`)
+      .put(`/api/events/${mockEvent.id}`)
       .send({ title: 'New Title' });
 
     expect(res.status).toBe(403);
@@ -144,7 +147,7 @@ describe('PATCH /api/events/:id', () => {
 
   it('should return 400 for invalid data', async () => {
     const res = await request(app)
-      .patch(`/api/events/${mockEvent.id}`)
+      .put(`/api/events/${mockEvent.id}`)
       .send({ budget: -50 });
 
     expect(res.status).toBe(400);
