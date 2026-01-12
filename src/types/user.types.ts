@@ -1,0 +1,33 @@
+export interface User {
+  id: number;
+  email: string;
+  password: string;
+  username: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface UserWithoutPassword {
+  id: number;
+  email: string;
+  username: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface CreateUserDTO {
+  email: string;
+  password: string;
+  username: string;
+}
+
+export interface LoginDTO {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  user: UserWithoutPassword;
+  token: string;
+}
+
