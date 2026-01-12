@@ -1,0 +1,36 @@
+# ═══════════════════════════════════════════════════════════════
+# Health Endpoints
+# ═══════════════════════════════════════════════════════════════
+
+/health:
+  get:
+    tags:
+      - Health
+    summary: Vérifier l'état de l'API et de la base de données
+    description: |
+      Retourne le statut de l'API et de la connexion à la base de données.
+      Utilisé pour les healthchecks Docker et le monitoring.
+    operationId: getHealth
+    responses:
+      "200":
+        description: API et base de données fonctionnelles
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/HealthResponse"
+            example:
+              status: OK
+              timestamp: "2025-12-12T12:00:00.000Z"
+              database: connected
+              environment: production
+      "503":
+        description: Base de données non disponible
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/HealthResponse"
+            example:
+              status: ERROR
+              timestamp: "2025-12-12T12:00:00.000Z"
+              database: disconnected
+              environment: production

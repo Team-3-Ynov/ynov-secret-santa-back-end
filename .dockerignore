@@ -1,0 +1,50 @@
+# ═══════════════════════════════════════════════════════════════
+# Docker Ignore - Fichiers à exclure du build Docker
+# ═══════════════════════════════════════════════════════════════
+
+# Dependencies
+node_modules/
+
+# Build output (sera recréé dans le container)
+dist/
+
+# Environment files (NE JAMAIS inclure dans l'image!)
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test coverage
+coverage/
+
+# Docker files (pas besoin dans l'image)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Tests (pas nécessaires en production)
+src/__tests__/
+jest.config.js
