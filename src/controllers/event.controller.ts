@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createEvent, findEventById, updateEvent, createInvitation, joinEvent, performDraw, getAssignment } from '../services/event.service';
+import { createEvent, findEventById, updateEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId } from '../services/event.service';
 import { validateEventInput, updateEventSchema } from '../models/event.model';
 import { invitationSchema } from '../models/invitation.model';
 import { sendInvitationEmail } from '../services/email.service';
@@ -151,5 +151,21 @@ export const getAssignmentHandler = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur lors de la récupération de l\'assignation.' });
+  }
+};
+
+export const getUserEventsHandler = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const events = await getEventsByUserId(userId);
+    res.status(200).json(events);
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };
