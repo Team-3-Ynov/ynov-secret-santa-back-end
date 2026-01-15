@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createEvent, findEventById, updateEvent, createInvitation } from '../services/eventService';
+import { createEvent, findEventById, updateEvent, createInvitation, getEventsByOwner } from '../services/eventService';
 import { validateEventInput, updateEventSchema } from '../models/event';
 import { invitationSchema } from '../models/invitation.model';
 import { sendInvitationEmail } from '../services/emailService';
@@ -78,5 +78,38 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur lors de l\'envoi de l\'invitation.' });
+  }
+};
+
+export const getEventByIdHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const event = await findEventById(id);
+
+    if (!event) {
+      res.status(404).json({ success: false, message: 'Event not found' });
+      return;
+    }
+
+    res.status(200).json(event);
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const getUserEventsHandler = async (req: Request, res: Response) => {
+  try {
+    const userEmail = (req as any).userEmail;
+
+    if (!userEmail) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const events = await getEventsByOwner(userEmail);
+    res.status(200).json(events);
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
   }
 };

@@ -78,3 +78,15 @@ export const updateEvent = async (id: string, payload: Partial<UpdateEventInput>
   const result = await pool.query<EventRecord>(query, values);
   return result.rows[0] || null;
 };
+
+export const getEventsByOwner = async (email: string): Promise<EventRecord[]> => {
+  const result = await pool.query<EventRecord>(
+    `SELECT id, title, description, event_date AS "eventDate", budget, owner_email AS "ownerEmail", created_at AS "createdAt"
+     FROM events
+     WHERE owner_email = $1
+     ORDER BY event_date DESC`,
+    [email]
+  );
+
+  return result.rows;
+};
