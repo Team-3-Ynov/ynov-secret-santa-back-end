@@ -188,3 +188,14 @@ export const getAssignment = async (eventId: string, userId: number): Promise<As
   );
   return result.rows[0] || null;
 };
+
+export const getEventsByUserId = async (userId: number): Promise<EventRecord[]> => {
+  const result = await pool.query<EventRecord>(
+    `SELECT id, title, description, event_date AS "eventDate", budget, owner_id AS "ownerId", created_at AS "createdAt"
+     FROM events
+     WHERE owner_id = $1
+     ORDER BY event_date DESC`,
+    [userId]
+  );
+  return result.rows;
+};
