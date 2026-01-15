@@ -13,7 +13,4 @@ router.post('/:id/join', joinEventHandler);
 router.post('/:id/draw', drawEventHandler);
 router.get('/:id/my-assignment', getAssignmentHandler);
 
-// PATCH /api/events/:id - Mettre à jour un événement (authentifié)
-router.patch('/:id', authenticate, updateEventHandler);
-
 export default router;
