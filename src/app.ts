@@ -9,9 +9,6 @@ import eventRoutes from './routes/event.routes';
 
 const app: Express = express();
 
-// ═══════════════════════════════════════════════════════════════
-// Configuration CORS - Règles propres (pas de *)
-// ═══════════════════════════════════════════════════════════════
 const corsOptions: cors.CorsOptions = {
   origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3001'],
   credentials: true,
@@ -19,27 +16,21 @@ const corsOptions: cors.CorsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-// Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Documentation Swagger
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'Secret Santa API - Documentation',
 }));
 
-// Route pour récupérer le JSON OpenAPI
-app.get('/api-docs.json', (req, res) => {
+app.get('/api-docs.json', (_, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
 });
 
-// ═══════════════════════════════════════════════════════════════
-// Healthcheck - Vérifie la connexion DB (doc dans src/docs/paths/health.yaml)
-// ═══════════════════════════════════════════════════════════════
-app.get('/health', async (req, res) => {
+app.get('/health', async (_, res) => {
   try {
     // Vérifie la connexion à la base de données
     await pool.query('SELECT 1');
@@ -59,7 +50,6 @@ app.get('/health', async (req, res) => {
   }
 });
 
-// Routes API
 app.use('/api/auth', authRoutes);
 app.use('/api/events', eventRoutes);
 

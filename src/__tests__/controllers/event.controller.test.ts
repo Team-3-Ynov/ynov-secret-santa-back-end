@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { createEventHandler } from '../../controllers/eventController';
-import * as eventService from '../../services/eventService';
+import { createEventHandler } from '../../controllers/event.controller';
+import * as eventService from '../../services/event.service';
 
-jest.mock('../../services/eventService');
+jest.mock('../../services/event.service');
 
 describe('createEventHandler', () => {
   let mockReq: Partial<Request>;
@@ -14,7 +14,12 @@ describe('createEventHandler', () => {
     jsonMock = jest.fn();
     statusMock = jest.fn().mockReturnValue({ json: jsonMock });
 
-    mockReq = { body: {} };
+    // Injecter user.id pour l'authentification
+    mockReq = {
+      body: {},
+      user: { id: 1, email: 'test@example.com' }
+    } as any;
+
     mockRes = { status: statusMock, json: jsonMock } as any;
 
     jest.clearAllMocks();
@@ -29,15 +34,31 @@ describe('createEventHandler', () => {
   });
 
   it('should create event and return 201', async () => {
-    const createdEvent = { id: '1', title: 'Test', description: null, eventDate: new Date(), budget: null, ownerEmail: 'test@example.com', createdAt: new Date() };
+    const createdEvent = {
+      id: '1',
+      title: 'Test',
+      description: null,
+      eventDate: new Date(),
+      budget: null,
+      ownerId: 1,
+      createdAt: new Date()
+    };
     (eventService.createEvent as jest.Mock).mockResolvedValue(createdEvent);
 
-    mockReq.body = { title: 'Test', eventDate: new Date(Date.now() + 3600 * 1000).toISOString(), ownerEmail: 'test@example.com' };
+    mockReq.body = { title: 'Test', eventDate: new Date(Date.now() + 3600 * 1000).toISOString() };
 
     await createEventHandler(mockReq as Request, mockRes as Response);
 
     expect(eventService.createEvent).toHaveBeenCalled();
     expect(statusMock).toHaveBeenCalledWith(201);
     expect(jsonMock).toHaveBeenCalledWith({ success: true, data: createdEvent });
+  });
+
+  it('should return 401 if not authenticated', async () => {
+    (mockReq as any).user = undefined; // Simulate unauthenticated
+
+    await createEventHandler(mockReq as Request, mockRes as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(401);
   });
 });

@@ -21,7 +21,7 @@ async function runMigrations() {
 
     console.log('✅ Toutes les migrations ont été exécutées avec succès!');
   } catch (error) {
-    console.error('❌ Erreur lors des migrations:', error);
+    console.error('❌ Erreur critique lors des migrations:', error);
     process.exit(1);
   } finally {
     await pool.end();

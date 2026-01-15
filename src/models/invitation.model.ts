@@ -10,6 +10,7 @@ export interface InvitationRecord {
     id: string;
     event_id: string;
     email: string;
+    user_id?: number | null;
     status: 'pending' | 'accepted' | 'declined';
     created_at: Date;
     updated_at: Date;

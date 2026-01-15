@@ -1,4 +1,4 @@
-import { createInvitation } from '../../services/eventService';
+import { createInvitation } from '../../services/event.service';
 import { pool } from '../../config/database';
 
 jest.mock('../../config/database', () => ({

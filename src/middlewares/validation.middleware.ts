@@ -7,7 +7,7 @@ import { z } from 'zod';
 export const validate = (schema: z.ZodType) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req.body);
-    
+
     if (!result.success) {
       const errors = result.error.issues.map((issue) => ({
         field: issue.path.join('.'),
@@ -20,7 +20,7 @@ export const validate = (schema: z.ZodType) => {
       });
       return;
     }
-    
+
     next();
   };
 };

@@ -2,6 +2,7 @@
 import { z } from 'zod';
 
 // DTO Zod pour la création d'un évènement
+// Note: ownerId est injecté par le contrôleur depuis le token JWT, donc absent du schema public
 export const eventSchema = z.object({
   title: z.string().min(1, { message: 'Le titre est requis.' }).transform((s) => s.trim()),
   description: z.string().optional().transform((s) => (s ? s.trim() : undefined)),
@@ -19,7 +20,6 @@ export const eventSchema = z.object({
     .optional()
     .refine((v) => v === undefined || (!Number.isNaN(Number(v)) && Number(v) >= 0), { message: 'Le budget doit être un nombre positif.' })
     .transform((v) => (v === undefined ? undefined : Number(v))),
-  ownerEmail: z.string().email({ message: 'Un email propriétaire valide est requis.' }).transform((s) => s.trim().toLowerCase()),
 });
 
 export const updateEventSchema = eventSchema.pick({
@@ -31,14 +31,16 @@ export const updateEventSchema = eventSchema.pick({
 
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;
 
+// Input pour la création (validé par Zod, sans ownerId)
 export type EventInput = z.infer<typeof eventSchema>;
 
+// Input normalisé pour le service (avec ownerId injecté)
 export interface NormalizedEventInput {
   title: string;
   description?: string;
   eventDate: Date;
   budget?: number;
-  ownerEmail: string;
+  ownerId: number;
 }
 
 export interface EventRecord extends NormalizedEventInput {
@@ -57,15 +59,14 @@ export const validateEventInput = (payload: unknown) => {
     return { errors } as const;
   }
 
-  // Normaliser les données pour correspondre à NormalizedEventInput
+  // Normaliser les données de base (sans ownerId encore)
   const value = parsed.data;
-  const normalized: NormalizedEventInput = {
-    title: value.title,
-    description: value.description === '' ? undefined : value.description,
-    eventDate: new Date(value.eventDate),
-    budget: value.budget as number | undefined,
-    ownerEmail: value.ownerEmail,
-  };
-
-  return { data: normalized } as const;
+  return {
+    data: {
+      title: value.title,
+      description: value.description === '' ? undefined : value.description,
+      eventDate: new Date(value.eventDate),
+      budget: value.budget as number | undefined,
+    }
+  } as const;
 };

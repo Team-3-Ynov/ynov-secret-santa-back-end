@@ -64,6 +64,15 @@ export const UserModel = {
   },
 
   /**
+   * Trouve un utilisateur par son Email (inclut le password pour vérification)
+   */
+  async findByEmail(email: string): Promise<User | null> {
+    const query = 'SELECT * FROM users WHERE email = $1';
+    const result = await pool.query(query, [email]);
+    return result.rows[0] || null;
+  },
+
+  /**
    * Vérifie si un username existe déjà
    */
   async usernameExists(username: string): Promise<boolean> {
