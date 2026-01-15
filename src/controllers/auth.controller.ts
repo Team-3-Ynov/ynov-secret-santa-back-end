@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
 import { UserModel } from '../models/user.model';
 import { RefreshTokenModel } from '../models/refresh_token.model';
 import {
