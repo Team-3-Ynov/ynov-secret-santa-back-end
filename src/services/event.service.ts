@@ -57,7 +57,7 @@ export const joinEvent = async (eventId: string, userId: number, email: string):
   );
 
   if (invitationResult.rows.length === 0) {
-    // Optionnel : permettre de rejoindre sans invitation explicite si l'événement est public ? 
+    // Optionnel : permettre de rejoindre sans invitation explicite si l'événement est public ?
     // Pour l'instant on requiert une invitation
     return { success: false, message: 'Aucune invitation trouvée pour cet événement.' };
   }
@@ -88,6 +88,30 @@ export const findEventById = async (id: string): Promise<EventRecord | null> => 
     [id],
   );
   return result.rows[0] || null;
+};
+
+export const deleteEvent = async (id: string): Promise<boolean> => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // Supprimer les assignations liées
+    await client.query('DELETE FROM assignments WHERE event_id = $1', [id]);
+
+    // Supprimer les invitations liées
+    await client.query('DELETE FROM invitations WHERE event_id = $1', [id]);
+
+    // Supprimer l'événement
+    const result = await client.query('DELETE FROM events WHERE id = $1', [id]);
+
+    await client.query('COMMIT');
+    return (result.rowCount ?? 0) > 0;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const updateEvent = async (id: string, payload: Partial<UpdateEventInput>): Promise<EventRecord | null> => {
@@ -219,3 +243,43 @@ export const getEventParticipants = async (eventId: string): Promise<Participant
   );
   return result.rows;
 };
+
+export interface InvitationWithUser {
+  id: string;
+  event_id: string;
+  email: string;
+  status: string;
+  user_id: number | null;
+  username: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export const getEventInvitations = async (eventId: string): Promise<InvitationWithUser[]> => {
+  const result = await pool.query<InvitationWithUser>(
+    `SELECT i.id, i.event_id, i.email, i.status, i.user_id, u.username, i.created_at, i.updated_at
+     FROM invitations i
+     LEFT JOIN users u ON i.user_id = u.id
+     WHERE i.event_id = $1
+     ORDER BY i.created_at DESC`,
+    [eventId]
+  );
+  return result.rows;
+};
+
+export const findInvitationById = async (invitationId: string): Promise<InvitationRecord | null> => {
+  const result = await pool.query<InvitationRecord>(
+    'SELECT * FROM invitations WHERE id = $1',
+    [invitationId]
+  );
+  return result.rows[0] || null;
+};
+
+export const deleteInvitation = async (invitationId: string): Promise<boolean> => {
+  const result = await pool.query(
+    'DELETE FROM invitations WHERE id = $1',
+    [invitationId]
+  );
+  return (result.rowCount ?? 0) > 0;
+};
+
