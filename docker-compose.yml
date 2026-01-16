@@ -1,10 +1,9 @@
-# ═══════════════════════════════════════════════════════════════
-# Docker Compose - Secret Santa Application
-# ═══════════════════════════════════════════════════════════════
-# Usage:
-#   Staging:    docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
-#   Production: docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
-# ═══════════════════════════════════════════════════════════════
+
+include:
+  - path: ../ynov-secret-santa-front-end/docker-compose.yml
+    # Optional: Include root env if needed, or rely on defaults/local .env
+    # env_file: ../.env 
+
 
 services:
   # ═══════════════════════════════════════════════════════════════
@@ -20,8 +19,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      frontend:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/nginx-health"]
       interval: 30s
@@ -36,11 +33,11 @@ services:
   # Backend Express API
   # ═══════════════════════════════════════════════════════════════
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/secret-santa-backend:${IMAGE_TAG:-latest}
+    image: ghcr.io/team-3-ynov/ynov-secret-santa-back-end:${IMAGE_TAG:-staging}
+    # build:
+    #   context: .
+    #   dockerfile: docker/Dockerfile
     container_name: secret_santa_backend
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=3000
@@ -50,7 +47,7 @@ services:
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000,http://localhost:3001,http://localhost:8081,http://localhost}
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,30 +60,6 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-    # Port NON exposé publiquement - accessible uniquement via nginx
-
-  # ═══════════════════════════════════════════════════════════════
-  # Frontend Next.js
-  # ═══════════════════════════════════════════════════════════════
-  frontend:
-    image: secret-santa-frontend:local
-    build:
-      context: ../ynov-secret-santa-front-end
-      dockerfile: Dockerfile
-    container_name: secret_santa_frontend
-    environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - PORT=3001
-    # healthcheck:
-    #   test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3001"]
-    #   interval: 30s
-    #   timeout: 3s
-    #   retries: 3
-    #   start_period: 15s
-    restart: unless-stopped
-    networks:
-      - app-network
-    # Port NON exposé publiquement - accessible uniquement via nginx
 
   # ═══════════════════════════════════════════════════════════════
   # PostgreSQL Database
@@ -107,12 +80,9 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
-    ports:
-      - "5432:5432"  # Exposed for local development
     restart: unless-stopped
     networks:
       - app-network
-    # Port exposé pour le développement local
 
   # ═══════════════════════════════════════════════════════════════
   # Mailhog SMTP Server
@@ -126,16 +96,10 @@ services:
     networks:
       - app-network
 
-# ═══════════════════════════════════════════════════════════════
-# Networks
-# ═══════════════════════════════════════════════════════════════
 networks:
   app-network:
     driver: bridge
 
-# ═══════════════════════════════════════════════════════════════
-# Volumes
-# ═══════════════════════════════════════════════════════════════
 volumes:
   postgres_data:
     driver: local
