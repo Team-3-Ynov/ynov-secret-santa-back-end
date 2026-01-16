@@ -27,7 +27,7 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
-      - app-network
+      - frontend-backend
 
   # ═══════════════════════════════════════════════════════════════
   # Backend Express API
@@ -59,7 +59,9 @@ services:
       start_period: 15s
     restart: unless-stopped
     networks:
-      - app-network
+      - frontend-backend
+      - backend-database
+      - backend-mailhog
 
   # ═══════════════════════════════════════════════════════════════
   # PostgreSQL Database
@@ -82,7 +84,7 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
-      - app-network
+      - backend-database
 
   # ═══════════════════════════════════════════════════════════════
   # Mailhog SMTP Server
@@ -94,10 +96,14 @@ services:
       - "1025:1025" # SMTP port
       - "8025:8025" # Web UI
     networks:
-      - app-network
+      - backend-mailhog
 
 networks:
-  app-network:
+  frontend-backend:
+    driver: bridge
+  backend-database:
+    driver: bridge
+  backend-mailhog:
     driver: bridge
 
 volumes:
