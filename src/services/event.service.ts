@@ -199,3 +199,21 @@ export const getEventsByUserId = async (userId: number): Promise<EventRecord[]> 
   );
   return result.rows;
 };
+
+export interface Participant {
+  id: number;
+  username: string;
+  email: string;
+}
+
+export const getEventParticipants = async (eventId: string): Promise<Participant[]> => {
+  const result = await pool.query<Participant>(
+    `SELECT u.id, u.username, u.email
+     FROM invitations i
+     JOIN users u ON i.user_id = u.id
+     WHERE i.event_id = $1 AND i.status = 'accepted' AND i.user_id IS NOT NULL
+     ORDER BY i.updated_at ASC`,
+    [eventId]
+  );
+  return result.rows;
+};

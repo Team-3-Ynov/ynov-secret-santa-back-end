@@ -41,7 +41,7 @@ Dockerfile*
 .dockerignore
 
 # Documentation
-docs/
+
 *.md
 !README.md
 
