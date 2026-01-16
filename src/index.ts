@@ -2,9 +2,16 @@ import 'dotenv/config';
 import app from './app';
 
 const PORT = process.env.PORT || 3000;
+const isDev = process.env.NODE_ENV !== 'production';
 
 // Démarrage du serveur
 app.listen(PORT, () => {
+  console.log('\n========================================');
   console.log(`🚀 Server started on http://localhost:${PORT}`);
-  console.log(`📚 Documentation Swagger: http://localhost:${PORT}/api-docs`);
+  console.log(`📚 Swagger: http://localhost:${PORT}/api-docs`);
+  console.log(`❤️  Health: http://localhost:${PORT}/health`);
+  if (isDev) {
+    console.log(`📧 MailHog: http://localhost:8025`);
+  }
+  console.log('========================================\n');
 });

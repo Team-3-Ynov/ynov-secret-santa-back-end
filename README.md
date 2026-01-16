@@ -68,21 +68,41 @@ JWT_SECRET=your-super-secret-key-change-this-in-production
 JWT_EXPIRES_IN=7d
 ```
 
-### 4. Démarrer PostgreSQL
+### 4. Démarrer les services de développement (PostgreSQL + MailHog)
 
 ```bash
-docker-compose up -d
+docker-compose -f docker-compose.dev.yml up -d
 ```
 
-> 💡 La table `users` est créée automatiquement au démarrage de PostgreSQL.
+Cela démarre :
+- **PostgreSQL** sur le port `5432` (base de données)
+- **MailHog** sur le port `1025` (SMTP) et `8025` (interface web pour voir les emails)
 
-### 5. Lancer le serveur
+> 💡 Accédez à http://localhost:8025 pour voir les emails envoyés en développement.
+
+### 5. Lancer le serveur backend
 
 ```bash
 pnpm dev
 ```
 
-Le serveur démarre sur http://localhost:3000
+Le serveur démarre sur http://localhost:3001
+
+### Commandes Docker utiles
+
+```bash
+# Démarrer les services de dev
+docker-compose -f docker-compose.dev.yml up -d
+
+# Arrêter les services
+docker-compose -f docker-compose.dev.yml down
+
+# Voir les logs
+docker-compose -f docker-compose.dev.yml logs -f
+
+# Redémarrer un service spécifique
+docker-compose -f docker-compose.dev.yml restart postgres
+```
 
 ## ⚙️ Configuration
 

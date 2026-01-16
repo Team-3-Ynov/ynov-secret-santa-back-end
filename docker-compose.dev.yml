@@ -1,0 +1,61 @@
+# ═══════════════════════════════════════════════════════════════
+# Docker Compose - Développement Local
+# ═══════════════════════════════════════════════════════════════
+# Usage:
+#   Lancer les services de dev: docker-compose -f docker-compose.dev.yml up -d
+#   Arrêter:                    docker-compose -f docker-compose.dev.yml down
+#   Voir les logs:              docker-compose -f docker-compose.dev.yml logs -f
+# ═══════════════════════════════════════════════════════════════
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # PostgreSQL Database
+  # ═══════════════════════════════════════════════════════════════
+  postgres:
+    image: postgres:16-alpine
+    container_name: secret_santa_db
+    environment:
+      - POSTGRES_DB=secret_santa
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d secret_santa"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    networks:
+      - dev-network
+
+  # ═══════════════════════════════════════════════════════════════
+  # MailHog - Serveur SMTP de test
+  # ═══════════════════════════════════════════════════════════════
+  mailhog:
+    image: mailhog/mailhog
+    container_name: secret_santa_mailhog
+    ports:
+      - "1025:1025"  # Port SMTP
+      - "8025:8025"  # Interface Web pour voir les emails
+    restart: unless-stopped
+    networks:
+      - dev-network
+
+# ═══════════════════════════════════════════════════════════════
+# Networks
+# ═══════════════════════════════════════════════════════════════
+networks:
+  dev-network:
+    driver: bridge
+
+# ═══════════════════════════════════════════════════════════════
+# Volumes
+# ═══════════════════════════════════════════════════════════════
+volumes:
+  postgres_data:
+    driver: local

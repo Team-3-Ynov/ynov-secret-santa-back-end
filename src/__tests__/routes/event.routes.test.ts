@@ -10,6 +10,11 @@ jest.mock('../../middlewares/auth.middleware', () => ({
   }
 }));
 
+// Mock du service email pour éviter les erreurs de connexion SMTP
+jest.mock('../../services/email.service', () => ({
+  sendInvitationEmail: jest.fn().mockResolvedValue(undefined),
+}));
+
 // Mock de la couche service pour ne pas toucher la BDD
 const mockEvent = {
   id: 'event-uuid-123',
