@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createEvent, findEventById, updateEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants } from '../services/event.service';
+import { createEvent, findEventById, updateEvent, deleteEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation } from '../services/event.service';
 import { validateEventInput, updateEventSchema } from '../models/event.model';
 import { invitationSchema } from '../models/invitation.model';
 import { sendInvitationEmail } from '../services/email.service';
@@ -78,6 +78,32 @@ export const updateEventHandler = async (req: Request, res: Response) => {
   } catch (error) {
     console.error(`Erreur lors de la mise à jour de l'événement ${id}:`, error);
     return res.status(500).json({ success: false, message: 'Impossible de mettre à jour l\'événement.' });
+  }
+};
+
+export const deleteEventHandler = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = (req as any).user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  try {
+    const event = await findEventById(id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+    }
+
+    if (event.ownerId !== userId) {
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à supprimer cet événement.' });
+    }
+
+    await deleteEvent(id);
+    return res.status(200).json({ success: true, message: 'Événement supprimé avec succès.' });
+  } catch (error) {
+    console.error(`Erreur lors de la suppression de l'événement ${id}:`, error);
+    return res.status(500).json({ success: false, message: 'Impossible de supprimer l\'événement.' });
   }
 };
 
@@ -207,3 +233,71 @@ export const getEventParticipantsHandler = async (req: Request, res: Response) =
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
+
+export const getEventInvitationsHandler = async (req: Request, res: Response) => {
+  try {
+    const { id: eventId } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Vérifier que l'événement existe
+    const event = await findEventById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+    }
+
+    // Seul le propriétaire peut voir la liste des invitations
+    if (event.ownerId !== userId) {
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à voir les invitations de cet événement.' });
+    }
+
+    const invitations = await getEventInvitations(eventId);
+    res.status(200).json({ success: true, data: invitations });
+  } catch (error) {
+    console.error('Error fetching invitations:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
+export const deleteInvitationHandler = async (req: Request, res: Response) => {
+  try {
+    const { id: eventId, invitationId } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Vérifier que l'événement existe
+    const event = await findEventById(eventId);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+    }
+
+    // Seul le propriétaire peut annuler une invitation
+    if (event.ownerId !== userId) {
+      return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à annuler cette invitation.' });
+    }
+
+    // Vérifier que l'invitation existe et appartient à cet événement
+    const invitation = await findInvitationById(invitationId);
+    if (!invitation || invitation.event_id !== eventId) {
+      return res.status(404).json({ success: false, message: 'Invitation non trouvée.' });
+    }
+
+    // Ne pas permettre d'annuler une invitation déjà acceptée
+    if (invitation.status === 'accepted') {
+      return res.status(400).json({ success: false, message: 'Impossible d\'annuler une invitation déjà acceptée.' });
+    }
+
+    await deleteInvitation(invitationId);
+    res.status(200).json({ success: true, message: 'Invitation annulée avec succès.' });
+  } catch (error) {
+    console.error('Error deleting invitation:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+};
+
