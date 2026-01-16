@@ -1,32 +1,11 @@
 version: '3.8'
 
-# ═══════════════════════════════════════════════════════════════
-# Docker Compose Override - STAGING
-# ═══════════════════════════════════════════════════════════════
-# Usage: docker compose -f docker-compose.yml -f docker-compose.staging.yml up -d
-#
-# Caractéristiques Staging:
-#   - Seeding complet avec données de test
-#   - Compte admin disponible
-#   - Logs verbeux
-#   - Port DB exposé pour debug (optionnel)
-# ═══════════════════════════════════════════════════════════════
-
 services:
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/secret-santa-backend:staging
     environment:
       - NODE_ENV=staging
-    # Exécute le seeding staging au démarrage
     command: sh -c "node dist/scripts/seed-staging.js 2>/dev/null || true && node dist/index.js"
-    # En staging, on peut exposer le port pour debug
-    # ports:
-    #   - "3000:3000"
-
-  frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/secret-santa-frontend:staging
-
+  
   postgres:
-    # En staging, on peut exposer le port pour debug/tests
     ports:
       - "5432:5432"
