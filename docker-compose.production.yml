@@ -1,29 +1,11 @@
 version: '3.8'
 
-# ═══════════════════════════════════════════════════════════════
-# Docker Compose Override - PRODUCTION
-# ═══════════════════════════════════════════════════════════════
-# Usage: docker compose -f docker-compose.yml -f docker-compose.production.yml up -d
-#
-# Caractéristiques Production:
-#   - Seeding minimal (pas de compte admin)
-#   - Aucun port exposé sauf Nginx
-#   - Logs minimaux
-#   - Sécurité renforcée
-# ═══════════════════════════════════════════════════════════════
-
 services:
   backend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/secret-santa-backend:production
+    image: ghcr.io/team-3-ynov/ynov-secret-santa-back-end:production
     environment:
       - NODE_ENV=production
-    # Exécute le seeding production au démarrage (minimal, pas d'admin)
     command: sh -c "node dist/scripts/seed-production.js 2>/dev/null || true && node dist/index.js"
-    # En production, JAMAIS de port exposé directement
-    # Le backend n'est accessible que via Nginx
 
-  frontend:
-    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/secret-santa-frontend:production
-
-  # En production, la DB n'est JAMAIS exposée
-  # Aucun port mapping pour postgres
+  postgres:
+    ports: []
