@@ -191,10 +191,12 @@ export const getAssignment = async (eventId: string, userId: number): Promise<As
 
 export const getEventsByUserId = async (userId: number): Promise<EventRecord[]> => {
   const result = await pool.query<EventRecord>(
-    `SELECT id, title, description, event_date AS "eventDate", budget, owner_id AS "ownerId", created_at AS "createdAt"
-     FROM events
-     WHERE owner_id = $1
-     ORDER BY event_date DESC`,
+    `SELECT DISTINCT e.id, e.title, e.description, e.event_date AS "eventDate", e.budget, e.owner_id AS "ownerId", e.created_at AS "createdAt"
+     FROM events e
+     LEFT JOIN invitations i ON e.id = i.event_id
+     WHERE e.owner_id = $1 
+        OR (i.user_id = $1 AND i.status = 'accepted')
+     ORDER BY e.event_date DESC`,
     [userId]
   );
   return result.rows;
