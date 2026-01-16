@@ -5,6 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
+    "dev:services": "docker-compose -f docker-compose.dev.yml up -d",
+    "dev:services:down": "docker-compose -f docker-compose.dev.yml down",
+    "dev:services:logs": "docker-compose -f docker-compose.dev.yml logs -f",
     "build": "tsc",
     "start": "node dist/index.js",
     "migrate": "ts-node src/scripts/migrate.ts",
@@ -27,6 +30,8 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
+    "helmet": "^8.1.0",
     "js-yaml": "^4.1.1",
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^7.0.12",

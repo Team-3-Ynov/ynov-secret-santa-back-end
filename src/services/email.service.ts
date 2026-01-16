@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer';
 import 'dotenv/config';
 
+const isDev = process.env.NODE_ENV !== 'production' || process.env.SMTP_PORT === '1025';
+
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST === 'localhost' ? '127.0.0.1' : (process.env.SMTP_HOST || 'smtp.gmail.com'),
     port: parseInt(process.env.SMTP_PORT || '587'),
@@ -12,9 +14,7 @@ const transporter = nodemailer.createTransport({
 });
 
 export const sendInvitationEmail = async (to: string, eventTitle: string, inviteLink: string) => {
-    // Si on est en dev avec MailHog (port 1025), on accepte l'absence de credentials
-    const isDev = process.env.SMTP_PORT === '1025';
-
+    // Si on est en dev sans credentials SMTP configurés, on simule l'envoi
     if (!isDev && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
         console.warn('⚠️ SMTP credentials not found. Email not sent.');
         console.log(`[MOCK EMAIL] To: ${to}, Subject: Invitation Secret Santa, Link: ${inviteLink}`);
@@ -40,6 +40,12 @@ export const sendInvitationEmail = async (to: string, eventTitle: string, invite
         console.log('📧 Email envoyé: %s', info.messageId);
     } catch (error) {
         console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
+        // En développement, on log l'erreur mais on ne fait pas crasher la requête
+        if (isDev) {
+            console.warn('⚠️ [DEV MODE] Email non envoyé - MailHog probablement non démarré');
+            console.log(`[MOCK EMAIL] To: ${to}, Subject: Invitation Secret Santa, Link: ${inviteLink}`);
+            return; // On continue sans erreur en dev
+        }
         throw error;
     }
 };

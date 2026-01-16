@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { createEvent, findEventById, updateEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId } from '../services/event.service';
+import { createEvent, findEventById, updateEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants } from '../services/event.service';
 import { validateEventInput, updateEventSchema } from '../models/event.model';
 import { invitationSchema } from '../models/invitation.model';
 import { sendInvitationEmail } from '../services/email.service';
@@ -30,6 +30,27 @@ export const createEventHandler = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Erreur lors de la création de l\'évènement:', error);
     return res.status(500).json({ success: false, message: 'Impossible de créer l\'évènement.' });
+  }
+};
+
+export const getEventHandler = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const userId = (req as any).user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
+
+  try {
+    const event = await findEventById(id);
+    if (!event) {
+      return res.status(404).json({ success: false, message: 'Événement non trouvé.' });
+    }
+
+    return res.status(200).json({ success: true, data: event });
+  } catch (error) {
+    console.error(`Erreur lors de la récupération de l'événement ${id}:`, error);
+    return res.status(500).json({ success: false, message: 'Impossible de récupérer l\'événement.' });
   }
 };
 
@@ -166,6 +187,23 @@ export const getUserEventsHandler = async (req: Request, res: Response) => {
     res.status(200).json(events);
   } catch (error) {
     console.error('Error fetching user events:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+export const getEventParticipantsHandler = async (req: Request, res: Response) => {
+  try {
+    const { id: eventId } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const participants = await getEventParticipants(eventId);
+    res.status(200).json({ success: true, data: participants });
+  } catch (error) {
+    console.error('Error fetching participants:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
