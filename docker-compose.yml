@@ -33,7 +33,7 @@ services:
   # Backend Express API
   # ═══════════════════════════════════════════════════════════════
   backend:
-    image: ghcr.io/team-3-ynov/ynov-secret-santa-back-end:${IMAGE_TAG:-staging}
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER:-team-3-ynov}/ynov-secret-santa-back-end:${IMAGE_TAG:-staging}
     # build:
     #   context: .
     #   dockerfile: docker/Dockerfile
