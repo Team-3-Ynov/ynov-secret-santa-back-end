@@ -3,8 +3,8 @@
 # ═══════════════════════════════════════════════════════════════
 # 
 # Using profiles to handle different environments
-# docker compose -f docker-compose.yml -p all up   # all services
-# docker compose -f docker-compose.yml -p infra up # infra services
+# docker compose -f docker-compose.yml --profile all up   # all services
+# docker compose -f docker-compose.yml --profile infra up # infra services
 
 include:
   - path: ../ynov-secret-santa-front-end/docker-compose.yml
