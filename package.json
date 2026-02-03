@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon --exec ts-node src/index.ts",
-    "dev:services": "docker-compose -f docker-compose.yml up -d",
-    "dev:services:down": "docker-compose -f docker-compose.yml down",
-    "dev:services:logs": "docker-compose -f docker-compose.yml logs -f",
+    "dev:services": "docker-compose -f docker-compose.yml --profile infra up -d",
+    "dev:services:down": "docker-compose -f docker-compose.yml --profile infra down",
+    "dev:services:logs": "docker-compose -f docker-compose.yml --profile infra logs -f",
     "build": "tsc && cp -r src/docs dist/docs",
     "start": "node dist/index.js",
     "migrate": "ts-node scripts/migrate.ts",
