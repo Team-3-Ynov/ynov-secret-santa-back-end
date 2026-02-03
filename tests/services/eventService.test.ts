@@ -1,7 +1,7 @@
-import { createInvitation } from '../../services/event.service';
-import { pool } from '../../config/database';
+import { createInvitation } from '../../src/services/event.service';
+import { pool } from '../../src/config/database';
 
-jest.mock('../../config/database', () => ({
+jest.mock('../../src/config/database', () => ({
     pool: {
         query: jest.fn(),
     },

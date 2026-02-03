@@ -1,9 +1,15 @@
+# ═══════════════════════════════════════════════════════════════
+# Docker Compose
+# ═══════════════════════════════════════════════════════════════
+# 
+# Using profiles to handle different environments
+# docker compose -f docker-compose.yml --profile all up   # all services
+# docker compose -f docker-compose.yml --profile infra up # infra services
 
 include:
   - path: ../ynov-secret-santa-front-end/docker-compose.yml
     # Optional: Include root env if needed, or rely on defaults/local .env
-    # env_file: ../.env 
-
+    # env_file: ../.env
 
 services:
   # ═══════════════════════════════════════════════════════════════
@@ -12,15 +18,27 @@ services:
   nginx:
     image: nginx:alpine
     container_name: secret_santa_nginx
+    profiles: [all]
     ports:
       - "${NGINX_PORT:-80}:80"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - NGINX_ENVSUBST_FILTER=NODE_ENV
     volumes:
-      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
     depends_on:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/nginx-health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost/nginx-health",
+        ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -38,6 +56,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile
     container_name: secret_santa_backend
+    profiles: [all]
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=3000
@@ -52,7 +71,15 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/health",
+        ]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -69,6 +96,7 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: secret_santa_db
+    profiles: [all, infra]
     environment:
       - POSTGRES_DB=${DB_NAME:-secret_santa}
       - POSTGRES_USER=${DB_USER:-postgres}
@@ -77,12 +105,18 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./database/migrations:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-secret_santa}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-secret_santa}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT_MAPPING:-}"
     networks:
       - backend-database
 
@@ -92,6 +126,7 @@ services:
   mailhog:
     image: mailhog/mailhog
     container_name: secret_santa_mailhog
+    profiles: [all, infra]
     ports:
       - "1025:1025" # SMTP port
       - "8025:8025" # Web UI

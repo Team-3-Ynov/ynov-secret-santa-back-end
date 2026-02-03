@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { pool } from '../config/database';
+import { pool } from '../src/config/database';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -7,7 +7,7 @@ async function runMigrations() {
   console.log('🔄 Exécution des migrations...');
 
   try {
-    const migrationsDir = path.join(__dirname, '../../database/migrations');
+    const migrationsDir = path.join(__dirname, '../database/migrations');
     const files = fs.readdirSync(migrationsDir).sort();
 
     for (const file of files) {

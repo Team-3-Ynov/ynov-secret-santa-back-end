@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { createEventHandler } from '../../controllers/event.controller';
-import * as eventService from '../../services/event.service';
+import { createEventHandler } from '../../src/controllers/event.controller';
+import * as eventService from '../../src/services/event.service';
 
-jest.mock('../../services/event.service');
+jest.mock('../../src/services/event.service');
 
 describe('createEventHandler', () => {
   let mockReq: Partial<Request>;

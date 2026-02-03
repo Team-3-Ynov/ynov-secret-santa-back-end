@@ -1,5 +1,5 @@
-import { signAccessToken, verifyAccessToken, extractTokenFromHeader } from '../../utils/jwt.utils';
-import { UserWithoutPassword } from '../../types/user.types';
+import { signAccessToken, verifyAccessToken, extractTokenFromHeader } from '../../src/utils/jwt.utils';
+import { UserWithoutPassword } from '../../src/types/user.types';
 
 describe('JWT Utils', () => {
   const mockUser: UserWithoutPassword = {

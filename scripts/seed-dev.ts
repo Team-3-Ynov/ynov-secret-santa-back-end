@@ -12,9 +12,9 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
-import { pool } from '../config/database';
+import { pool } from '../src/config/database';
 import bcrypt from 'bcrypt';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 
 const SALT_ROUNDS = 10;
 

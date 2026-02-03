@@ -1,9 +1,9 @@
-import { UserModel } from '../../models/user.model';
-import { pool } from '../../config/database';
+import { UserModel } from '../../src/models/user.model';
+import { pool } from '../../src/config/database';
 import bcrypt from 'bcrypt';
 
 // Mock de la connexion à la base de données
-jest.mock('../../config/database', () => ({
+jest.mock('../../src/config/database', () => ({
   pool: {
     query: jest.fn(),
   },
