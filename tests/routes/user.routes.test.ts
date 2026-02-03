@@ -1,8 +1,8 @@
 import request from 'supertest';
-import app from '../../app';
+import app from '../../src/app';
 
 // Mock du middleware authenticate
-jest.mock('../../middlewares/auth.middleware', () => ({
+jest.mock('../../src/middlewares/auth.middleware', () => ({
   authenticate: (req: any, res: any, next: any) => {
     req.user = { id: 1, email: 'test@example.com' };
     next();
@@ -16,11 +16,11 @@ const mockPublicProfile = {
   created_at: new Date('2026-01-01'),
 };
 
-jest.mock('../../services/user.service', () => ({
+jest.mock('../../src/services/user.service', () => ({
   getPublicUserProfile: jest.fn(),
 }));
 
-const userService = require('../../services/user.service');
+const userService = require('../../src/services/user.service');
 
 describe('GET /api/users/:id', () => {
   beforeEach(() => {

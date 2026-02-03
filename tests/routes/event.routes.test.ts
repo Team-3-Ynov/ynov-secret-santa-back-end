@@ -1,8 +1,8 @@
 import request from 'supertest';
-import app from '../../app';
+import app from '../../src/app';
 
 // Mock du middleware authenticate pour bypasser la vérification JWT en tests
-jest.mock('../../middlewares/auth.middleware', () => ({
+jest.mock('../../src/middlewares/auth.middleware', () => ({
   authenticate: (req: any, res: any, next: any) => {
     // Injecter un user complet comme le fait le middleware
     req.user = { id: 1, email: 'test@example.com' };
@@ -11,7 +11,7 @@ jest.mock('../../middlewares/auth.middleware', () => ({
 }));
 
 // Mock du service email pour éviter les erreurs de connexion SMTP
-jest.mock('../../services/email.service', () => ({
+jest.mock('../../src/services/email.service', () => ({
   sendInvitationEmail: jest.fn().mockResolvedValue(undefined),
 }));
 
@@ -50,7 +50,7 @@ const mockAssignment = {
   receiver_id: 2,
 };
 
-jest.mock('../../services/event.service', () => ({
+jest.mock('../../src/services/event.service', () => ({
   createEvent: jest.fn().mockImplementation((payload) => Promise.resolve({
     id: 'uuid-1',
     title: payload.title,
@@ -85,7 +85,7 @@ jest.mock('../../services/event.service', () => ({
   getEventParticipants: jest.fn(),
 }));
 
-const eventService = require('../../services/event.service');
+const eventService = require('../../src/services/event.service');
 
 describe('POST /api/events', () => {
   it('should create an event when authenticated', async () => {

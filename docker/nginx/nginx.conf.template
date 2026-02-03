@@ -22,6 +22,9 @@ server {
     gzip_types text/plain text/css application/json application/javascript text/xml application/xml;
     gzip_min_length 1000;
 
+    # Variable d'environnement injectée par envsubst
+    set $node_env "${NODE_ENV}";
+
     # ═══════════════════════════════════════════════════════════════
     # Routes API → Backend Express
     # ═══════════════════════════════════════════════════════════════
@@ -51,6 +54,9 @@ server {
     # Documentation Swagger → Backend Express
     # ═══════════════════════════════════════════════════════════════
     location /api-docs {
+        if ($node_env = "production") {
+            return 404;
+        }
         proxy_pass http://backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -60,6 +66,9 @@ server {
     }
 
     location /api-docs.json {
+        if ($node_env = "production") {
+            return 404;
+        }
         proxy_pass http://backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
@@ -69,6 +78,9 @@ server {
     # Healthcheck Backend
     # ═══════════════════════════════════════════════════════════════
     location /health {
+        if ($node_env = "production") {
+            return 404;
+        }
         proxy_pass http://backend;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

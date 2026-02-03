@@ -53,6 +53,9 @@ pnpm install
 Créez un fichier `.env` à la racine du projet :
 
 ```env
+# Env
+NODE_ENV=development
+
 # Configuration du serveur
 PORT=3000
 
@@ -71,14 +74,18 @@ JWT_EXPIRES_IN=7d
 ### 4. Démarrer les services de développement (PostgreSQL + MailHog)
 
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+# Pour le développement (PostgreSQL + MailHog uniquement)
+docker compose --profile infra up -d
 ```
 
 Cela démarre :
-- **PostgreSQL** sur le port `5432` (base de données)
-- **MailHog** sur le port `1025` (SMTP) et `8025` (interface web pour voir les emails)
 
-> 💡 Accédez à http://localhost:8025 pour voir les emails envoyés en développement.
+- **PostgreSQL** sur le port `5432` (base de données)
+- **MailHog** sur le port `1025` (SMTP) et `8025` (interface web)
+
+> **Note** : Le profil `infra` est conçu pour être utilisé avec `pnpm dev` (serveur Node.js local).
+
+> 💡 Accédez à <http://localhost:8025> pour voir les emails envoyés en développement.
 
 ### 5. Lancer le serveur backend
 
@@ -86,22 +93,25 @@ Cela démarre :
 pnpm dev
 ```
 
-Le serveur démarre sur http://localhost:3001
+Le serveur démarre sur <http://localhost:3001>
 
 ### Commandes Docker utiles
 
 ```bash
-# Démarrer les services de dev
-docker-compose -f docker-compose.dev.yml up -d
+# Démarrer uniquement l'infrastructure (DB + MailHog)
+docker compose --profile infra up -d
 
-# Arrêter les services
-docker-compose -f docker-compose.dev.yml down
+# Démarrer tout la stack (Infra + Backend + Nginx)
+docker compose --profile all up -d
+
+# Arrêter tous les services
+docker compose --profile all down
 
 # Voir les logs
-docker-compose -f docker-compose.dev.yml logs -f
+docker compose logs -f
 
 # Redémarrer un service spécifique
-docker-compose -f docker-compose.dev.yml restart postgres
+docker compose restart postgres
 ```
 
 ## ⚙️ Configuration
@@ -118,6 +128,7 @@ docker-compose -f docker-compose.dev.yml restart postgres
 | `DB_PASSWORD` | Mot de passe PostgreSQL | `postgres` |
 | `JWT_SECRET` | Clé secrète JWT | - |
 | `JWT_EXPIRES_IN` | Durée de validité du token | `7d` |
+| `NODE_ENV` | Environnement | `development` |
 
 ## 📜 Commandes disponibles
 
@@ -135,11 +146,11 @@ docker-compose -f docker-compose.dev.yml restart postgres
 
 La documentation Swagger est disponible à l'adresse :
 
-**http://localhost:3000/api-docs**
+**<http://localhost:3000/api-docs>**
 
 Vous pouvez également récupérer la spécification OpenAPI au format JSON :
 
-**http://localhost:3000/api-docs.json**
+**<http://localhost:3000/api-docs.json>**
 
 ## 🔗 Endpoints
 
@@ -185,12 +196,14 @@ curl -X POST http://localhost:3000/api/auth/login \
 ### Règles de validation
 
 #### Mot de passe
+
 - Minimum **8 caractères**
 - Au moins **1 majuscule** (A-Z)
 - Au moins **1 minuscule** (a-z)
 - Au moins **1 chiffre** (0-9)
 
 #### Nom d'utilisateur
+
 - Entre **3 et 50 caractères**
 - Uniquement lettres, chiffres et underscores
 
@@ -223,13 +236,6 @@ pnpm test:coverage
 
 ```
 src/
-├── __tests__/              # Tests unitaires
-│   ├── controllers/
-│   ├── middlewares/
-│   ├── models/
-│   ├── schemas/
-│   ├── utils/
-│   └── setup.ts
 ├── config/
 │   ├── database.ts         # Configuration PostgreSQL
 │   └── swagger.ts          # Configuration Swagger
@@ -243,8 +249,6 @@ src/
 │   └── auth.routes.ts      # Routes d'authentification
 ├── schemas/
 │   └── auth.schema.ts      # Schémas de validation
-├── scripts/
-│   └── migrate.ts          # Script de migration
 ├── types/
 │   └── user.types.ts       # Types TypeScript
 ├── utils/
@@ -261,7 +265,11 @@ database/
 ### Démarrer PostgreSQL
 
 ```bash
-docker-compose up -d
+# Infrastructure uniquement
+docker compose --profile infra up -d
+
+# Full Stack (avec Backend et Nginx)
+docker compose --profile all up -d
 ```
 
 ### Arrêter PostgreSQL
@@ -277,19 +285,21 @@ docker-compose down -v
 docker-compose up -d
 ```
 
-
 ## 📧 Test des Emails
 
 ### Avec MailHog (Local)
 
 Pour tester l'envoi d'emails sans utiliser de véritable adresse, ce projet utilise [MailHog](https://github.com/mailhog/MailHog).
 
-1.  Démarrer les services Docker (Postgres + MailHog) :
+1. Démarrer les services Docker (Postgres + MailHog) :
+
     ```bash
     docker-compose up -d
     ```
-2.  Accéder à l'interface MailHog : [http://localhost:8025](http://localhost:8025)
-3.  Vérifier que le fichier `.env` est configuré pour MailHog (par défaut) :
+
+2. Accéder à l'interface MailHog : [http://localhost:8025](http://localhost:8025)
+3. Vérifier que le fichier `.env` est configuré pour MailHog (par défaut) :
+
     ```env
     SMTP_HOST=localhost
     SMTP_PORT=1025
@@ -303,7 +313,7 @@ Un script utilitaire est disponible pour vérifier rapidement la configuration :
 
 ```bash
 # Envoyer un email de test à une adresse spécifiée
-npx ts-node src/scripts/send-test-email.ts
+npx ts-node scripts/send-test-email.ts
 ```
 
 L'email apparaîtra dans l'interface MailHog (si configuré) ou sera envoyé réellement (si configuration SMTP réelle).

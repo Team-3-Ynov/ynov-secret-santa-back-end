@@ -1,4 +1,4 @@
-import { registerSchema, loginSchema } from '../../schemas/auth.schema';
+import { registerSchema, loginSchema } from '../../src/schemas/auth.schema';
 
 describe('Auth Schemas', () => {
   describe('registerSchema', () => {

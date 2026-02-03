@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
-import { AuthController } from '../../controllers/auth.controller';
-import { UserModel } from '../../models/user.model';
-import * as jwtUtils from '../../utils/jwt.utils';
+import { AuthController } from '../../src/controllers/auth.controller';
+import { UserModel } from '../../src/models/user.model';
+import * as jwtUtils from '../../src/utils/jwt.utils';
 
-import { RefreshTokenModel } from '../../models/refresh_token.model';
+import { RefreshTokenModel } from '../../src/models/refresh_token.model';
 
 // Mock des dépendances
-jest.mock('../../models/user.model');
-jest.mock('../../models/refresh_token.model');
-jest.mock('../../utils/jwt.utils');
+jest.mock('../../src/models/user.model');
+jest.mock('../../src/models/refresh_token.model');
+jest.mock('../../src/utils/jwt.utils');
 
 describe('AuthController', () => {
   let mockRequest: Partial<Request>;
