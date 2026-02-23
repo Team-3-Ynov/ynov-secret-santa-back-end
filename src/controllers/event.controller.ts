@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { addExclusion, createEvent, findEventById, updateEvent, deleteEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, getEventExclusions, deleteExclusion } from '../services/event.service';
 import { validateEventInput, updateEventSchema } from '../models/event.model';
 import { invitationSchema } from '../models/invitation.model';
+import { exclusionInputSchema } from '../models/exclusion.model';
 import { sendInvitationEmail } from '../services/email.service';
 
 export const createEventHandler = async (req: Request, res: Response) => {
@@ -304,11 +305,16 @@ export const deleteInvitationHandler = async (req: Request, res: Response) => {
 export const addExclusionHandler = async (req: Request, res: Response) => {
   const { id: eventId } = req.params;
   const userId = (req as any).user?.id;
-  const { giverId, receiverId } = req.body;
 
   if (!userId) {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
+
+  const parsed = exclusionInputSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, errors: parsed.error.flatten().fieldErrors });
+  }
+  const { giverId, receiverId } = parsed.data;
 
   try {
     const event = await findEventById(eventId);

@@ -32,13 +32,39 @@ describe('Event Controller - Exclusions', () => {
       expect(statusMock).toHaveBeenCalledWith(401);
     });
 
+    it('should return 400 if giverId is missing', async () => {
+      mockReq.body = { receiverId: 2 };
+      await addExclusionHandler(mockReq as Request, mockRes as Response);
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it('should return 400 if receiverId is missing', async () => {
+      mockReq.body = { giverId: 1 };
+      await addExclusionHandler(mockReq as Request, mockRes as Response);
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it('should return 400 if giverId is not a valid number', async () => {
+      mockReq.body = { giverId: 'abc', receiverId: 2 };
+      await addExclusionHandler(mockReq as Request, mockRes as Response);
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it('should return 400 if giverId is a float', async () => {
+      mockReq.body = { giverId: 1.5, receiverId: 2 };
+      await addExclusionHandler(mockReq as Request, mockRes as Response);
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
     it('should return 404 if event not found', async () => {
+      mockReq.body = { giverId: 1, receiverId: 2 };
       (eventService.findEventById as jest.Mock).mockResolvedValue(null);
       await addExclusionHandler(mockReq as Request, mockRes as Response);
       expect(statusMock).toHaveBeenCalledWith(404);
     });
 
     it('should return 403 if user is not the owner', async () => {
+      mockReq.body = { giverId: 1, receiverId: 2 };
       (eventService.findEventById as jest.Mock).mockResolvedValue({ id: 'event-1', ownerId: 2 });
       await addExclusionHandler(mockReq as Request, mockRes as Response);
       expect(statusMock).toHaveBeenCalledWith(403);
@@ -55,6 +81,18 @@ describe('Event Controller - Exclusions', () => {
       expect(eventService.addExclusion).toHaveBeenCalledWith('event-1', 1, 2);
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(jsonMock).toHaveBeenCalledWith({ success: true, data: mockExclusions });
+    });
+
+    it('should coerce string integers and add exclusion', async () => {
+      (eventService.findEventById as jest.Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
+      const mockExclusions = [{ id: 1, event_id: 'event-1', giver_id: 3, receiver_id: 4 }];
+      (eventService.getEventExclusions as jest.Mock).mockResolvedValue(mockExclusions);
+
+      mockReq.body = { giverId: '3', receiverId: '4' };
+      await addExclusionHandler(mockReq as Request, mockRes as Response);
+
+      expect(eventService.addExclusion).toHaveBeenCalledWith('event-1', 3, 4);
+      expect(statusMock).toHaveBeenCalledWith(201);
     });
   });
 
