@@ -218,49 +218,95 @@ function findValidAssignment(
   participants: number[],
   exclusions: Map<number, number[]>
 ): { giver: number; receiver: number }[] | null {
-  const givers = shuffle(participants);
-  const receivers = new Set(participants);
-  const assignments: { giver: number; receiver: number }[] = [];
+  // We model the problem as a bipartite graph between givers (left side)
+  // and receivers (right side), both indexed over the participants array.
+  // We then compute a maximum matching; if it covers all givers, we build
+  // the corresponding assignments.
 
-  function backtrack(giverIndex: number): boolean {
-    if (giverIndex === givers.length) {
-      // Cas de base: tous les donneurs sont assignés
-      // Il faut vérifier que le dernier assigné ne crée pas un cycle court non souhaité
-      // et que l'assignation est un dérangement complet (personne ne se tire soi-même)
-      // ce qui est déjà géré par la logique de sélection des receveurs.
-      return true;
+  const n = participants.length;
+
+  if (n === 0) {
+    return [];
+  }
+
+  // Map receiver id -> index on the right side
+  const receiverIndex = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    receiverIndex.set(participants[i], i);
+  }
+
+  // Build adjacency list: for each giver index, list of allowed receiver indices
+  const adjacency: number[][] = new Array(n);
+  for (let gi = 0; gi < n; gi++) {
+    const giverId = participants[gi];
+    const giverExclusions = new Set(exclusions.get(giverId) || []);
+    const neighbors: number[] = [];
+
+    for (let ri = 0; ri < n; ri++) {
+      const receiverId = participants[ri];
+
+      // Disallow self-giving and excluded receivers
+      if (giverId === receiverId) {
+        continue;
+      }
+      if (giverExclusions.has(receiverId)) {
+        continue;
+      }
+
+      neighbors.push(ri);
     }
 
-    const giver = givers[giverIndex];
-    const possibleReceivers = shuffle(Array.from(receivers));
-    const giverExclusions = exclusions.get(giver) || [];
+    adjacency[gi] = neighbors;
+  }
 
-    for (const receiver of possibleReceivers) {
-      if (
-        giver !== receiver && // on ne peut pas se donner à soi-même
-        !giverExclusions.includes(receiver) // on ne peut pas donner à qqn d'exclu
-      ) {
-        assignments.push({ giver, receiver });
-        receivers.delete(receiver);
+  // matchToReceiver[ri] = giver index matched to receiver index ri, or -1 if free
+  const matchToReceiver: number[] = new Array(n).fill(-1);
 
-        if (backtrack(giverIndex + 1)) {
-          return true; // Solution trouvée
-        }
+  function tryMatch(giverIndex: number, seen: boolean[]): boolean {
+    const neighbors = adjacency[giverIndex];
 
-        // Backtrack
-        assignments.pop();
-        receivers.add(receiver);
+    for (let k = 0; k < neighbors.length; k++) {
+      const receiverIdx = neighbors[k];
+
+      if (seen[receiverIdx]) {
+        continue;
+      }
+      seen[receiverIdx] = true;
+
+      const currentGiver = matchToReceiver[receiverIdx];
+      if (currentGiver === -1 || tryMatch(currentGiver, seen)) {
+        matchToReceiver[receiverIdx] = giverIndex;
+        return true;
       }
     }
 
-    return false; // Pas de solution trouvée à partir de ce point
+    return false;
   }
 
-  if (backtrack(0)) {
-    return assignments;
+  // Run bipartite matching: each giver tries to find an augmenting path.
+  for (let gi = 0; gi < n; gi++) {
+    const seen: boolean[] = new Array(n).fill(false);
+    if (!tryMatch(gi, seen)) {
+      // No perfect matching exists under the constraints
+      return null;
+    }
   }
 
-  return null; // Aucune solution globale trouvée
+  // Build assignments from the matching
+  const assignments: { giver: number; receiver: number }[] = [];
+  for (let ri = 0; ri < n; ri++) {
+    const gi = matchToReceiver[ri];
+    if (gi === -1) {
+      // Should not happen if we confirmed a perfect matching above,
+      // but keep a safety check.
+      return null;
+    }
+    const giverId = participants[gi];
+    const receiverId = participants[ri];
+    assignments.push({ giver: giverId, receiver: receiverId });
+  }
+
+  return assignments;
 }
 
 
