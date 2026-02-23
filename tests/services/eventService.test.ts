@@ -1,5 +1,4 @@
 import { createEvent, createInvitation, joinEvent, findEventById, deleteEvent, updateEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, addExclusion, getEventExclusions, deleteExclusion } from '../../src/services/event.service';
-import { randomUUID } from 'crypto';
 
 describe('EventService - Unified Dependency Injection Tests', () => {
     let mockPool: any;
