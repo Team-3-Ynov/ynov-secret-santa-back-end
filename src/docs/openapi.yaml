@@ -226,3 +226,234 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    Exclusion:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        event_id:
+          type: string
+          format: uuid
+        giver_id:
+          type: integer
+          example: 1
+        receiver_id:
+          type: integer
+          example: 2
+        created_at:
+          type: string
+          format: date-time
+
+    AddExclusionRequest:
+      type: object
+      required:
+        - giverId
+        - receiverId
+      properties:
+        giverId:
+          type: integer
+          description: ID de l'utilisateur qui ne doit pas donner
+          example: 1
+        receiverId:
+          type: integer
+          description: ID de l'utilisateur qui ne doit pas recevoir
+          example: 2
+
+paths:
+  # ═══════════════════════════════════════════════════════════════
+  # Health
+  # ═══════════════════════════════════════════════════════════════
+  /health:
+    get:
+      tags: [Health]
+      summary: Vérifier l'état de l'API
+      responses:
+        200:
+          description: API en ligne
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Auth
+  # ═══════════════════════════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Créer un nouveau compte
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        201:
+          description: Compte créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        400:
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrorResponse"
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Se connecter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        200:
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        401:
+          description: Identifiants incorrects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Events
+  # ═══════════════════════════════════════════════════════════════
+  /events:
+    get:
+      tags: [Events]
+      summary: Liste les événements de l'utilisateur
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Liste des événements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Event"
+
+    post:
+      tags: [Events]
+      summary: Créer un nouvel événement
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EventRequest"
+      responses:
+        201:
+          description: Événement créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /events/{id}/exclusions:
+    get:
+      tags: [Events]
+      summary: Liste toutes les exclusions d'un événement
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        200:
+          description: Liste des exclusions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Exclusion"
+
+    patch:
+      tags: [Events]
+      summary: Ajouter une exclusion nominative
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddExclusionRequest"
+      responses:
+        201:
+          description: Exclusion ajoutée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Exclusion"
+
+  /events/{id}/exclusions/{exclusionId}:
+    delete:
+      tags: [Events]
+      summary: Supprimer une exclusion
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: exclusionId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Exclusion supprimée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
