@@ -1,0 +1,57 @@
+FAIL tests/models/user.model.test.ts
+  UserModel
+    create
+      ├ù should hash password and create a new user (9 ms)
+    verifyCredentials
+      ÔêÜ should return user without password when credentials are valid (2 ms)
+      ÔêÜ should return null when user not found (1 ms)
+      ÔêÜ should return null when password is incorrect
+    findById
+      ÔêÜ should return user without password when found
+      ÔêÜ should return null when user not found (1 ms)
+    emailExists
+      ÔêÜ should return true when email exists (1 ms)
+      ÔêÜ should return false when email does not exist
+    usernameExists
+      ÔêÜ should return true when username exists
+      ÔêÜ should return false when username does not exist
+
+  ÔùÅ UserModel ÔÇ║ create ÔÇ║ should hash password and create a new user
+
+    expect(jest.fn()).toHaveBeenCalledWith(...expected)
+
+    - Expected
+    + Received
+
+      "
+          INSERT INTO users (email, password, username, first_name, last_name)
+          VALUES ($1, $2, $3, $4, $5)
+          RETURNING id, email, username, first_name, last_name, created_at, updated_at
+        ",
+      Array [
+        "test@example.com",
+        "hashed_password",
+        "testuser",
+    -   undefined,
+    -   undefined,
+    +   null,
+    +   null,
+      ],
+
+    Number of calls: 1
+
+      42 |
+      43 |       expect(bcrypt.hash).toHaveBeenCalledWith(userData.password, 10);
+    > 44 |       expect(pool.query).toHaveBeenCalledWith(
+         |                          ^
+      45 |         expect.stringContaining('INSERT INTO users'),
+      46 |         [userData.email, 'hashed_password', userData.username, undefined, undefined]
+      47 |       );
+
+      at Object.<anonymous> (tests/models/user.model.test.ts:44:26)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 9 passed, 10 total
+Snapshots:   0 total
+Time:        2.008 s
+Ran all test suites matching tests/models/user.model.test.ts.

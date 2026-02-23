@@ -28,6 +28,7 @@ export interface CreateUserDTO {
 }
 
 export interface UpdateUserDTO {
+  email?: string;
   username?: string;
   first_name?: string;
   last_name?: string;
@@ -36,11 +37,6 @@ export interface UpdateUserDTO {
 export interface LoginDTO {
   email: string;
   password: string;
-}
-
-export interface UpdateUserDTO {
-  email?: string;
-  username?: string;
 }
 
 export interface UpdatePasswordDTO {

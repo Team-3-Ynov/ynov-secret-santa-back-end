@@ -43,10 +43,43 @@ describe('UserModel', () => {
       expect(bcrypt.hash).toHaveBeenCalledWith(userData.password, 10);
       expect(pool.query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO users'),
-        [userData.email, 'hashed_password', userData.username]
+        [userData.email, 'hashed_password', userData.username, null, null]
       );
       expect(result).toEqual(mockResult.rows[0]);
       expect(result).not.toHaveProperty('password');
+    });
+
+    it('should create a new user with first and last names', async () => {
+      const userData = {
+        email: 'names@example.com',
+        password: 'plainPassword123',
+        username: 'namesuser',
+        first_name: 'John',
+        last_name: 'Doe',
+      };
+
+      const mockResult = {
+        rows: [{
+          id: 2,
+          email: userData.email,
+          username: userData.username,
+          first_name: userData.first_name,
+          last_name: userData.last_name,
+          created_at: new Date(),
+          updated_at: new Date(),
+        }],
+      };
+
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
+      (pool.query as jest.Mock).mockResolvedValue(mockResult);
+
+      const result = await UserModel.create(userData);
+
+      expect(pool.query).toHaveBeenCalledWith(
+        expect.stringContaining('INSERT INTO users'),
+        [userData.email, 'hashed_password', userData.username, 'John', 'Doe']
+      );
+      expect(result).toEqual(mockResult.rows[0]);
     });
   });
 
