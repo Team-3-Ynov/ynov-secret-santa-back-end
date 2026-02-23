@@ -116,6 +116,70 @@ describe('EventService - Unified Dependency Injection Tests', () => {
             expect(result).toHaveLength(2);
             expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
         });
+
+        it('should perform a draw while respecting exclusions', async () => {
+            // Participants: 1, 2, 3
+            // Exclusion: giver 1 cannot draw receiver 2
+            mockClientQuery
+                .mockResolvedValueOnce({ command: 'BEGIN' })
+                .mockResolvedValueOnce({
+                    rows: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }],
+                    rowCount: 3,
+                }) // participants
+                .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
+                .mockResolvedValueOnce({
+                    rows: [{ giver_id: 1, receiver_id: 2 }],
+                    rowCount: 1,
+                }) // exclusions
+                // Inserted assignments (none should match the excluded pair 1 -> 2)
+                .mockResolvedValueOnce({
+                    rows: [{ giver_id: 1, receiver_id: 3 }],
+                    rowCount: 1,
+                }) // insert 1
+                .mockResolvedValueOnce({
+                    rows: [{ giver_id: 2, receiver_id: 1 }],
+                    rowCount: 1,
+                }) // insert 2
+                .mockResolvedValueOnce({
+                    rows: [{ giver_id: 3, receiver_id: 2 }],
+                    rowCount: 1,
+                }) // insert 3
+                .mockResolvedValueOnce({ command: 'COMMIT' });
+
+            const result = await performDraw('event-1', mockPool);
+
+            expect(result).toHaveLength(3);
+            // Ensure no assignment matches the excluded pair (1 -> 2)
+            const hasExcludedPair = result.some(
+                (assignment: { giver_id: number; receiver_id: number }) =>
+                    assignment.giver_id === 1 && assignment.receiver_id === 2,
+            );
+            expect(hasExcludedPair).toBe(false);
+            expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
+        });
+
+        it('should fail when exclusions make a valid draw impossible', async () => {
+            // Participants: 1, 2
+            // Exclusions: 1 -> 2 and 2 -> 1 (no valid assignments possible)
+            mockClientQuery
+                .mockResolvedValueOnce({ command: 'BEGIN' })
+                .mockResolvedValueOnce({
+                    rows: [{ user_id: 1 }, { user_id: 2 }],
+                    rowCount: 2,
+                }) // participants
+                .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
+                .mockResolvedValueOnce({
+                    rows: [
+                        { giver_id: 1, receiver_id: 2 },
+                        { giver_id: 2, receiver_id: 1 },
+                    ],
+                    rowCount: 2,
+                }) // exclusions - impossible to satisfy
+                .mockResolvedValueOnce({ command: 'ROLLBACK' });
+
+            await expect(performDraw('event-1', mockPool)).rejects.toThrow();
+            expect(mockClientQuery).toHaveBeenCalledWith('ROLLBACK');
+        });
     });
 
     describe('getAssignment', () => {
