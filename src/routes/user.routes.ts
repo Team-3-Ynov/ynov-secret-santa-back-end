@@ -27,7 +27,4 @@ router.put('/me/password', validate(updatePasswordSchema), updatePasswordHandler
 // GET /api/users/:id - Profil public d'un utilisateur
 router.get('/:id', getPublicProfileHandler);
 
-// PUT /api/users/:id - Mettre à jour son profil
-router.put('/:id', updateProfileHandler);
-
 export default router;
