@@ -361,14 +361,22 @@ export const addExclusion = async (eventId: string, giverId: number, receiverId:
     throw new Error('Le receveur n\'est pas un participant accepté de cet événement.');
   }
 
-  const result = await clientPool.query<Exclusion>(
-    `INSERT INTO event_exclusions (event_id, giver_id, receiver_id)
-     VALUES ($1, $2, $3)
-     RETURNING *`,
-    [eventId, giverId, receiverId]
-  );
+  try {
+    const result = await clientPool.query<Exclusion>(
+      `INSERT INTO event_exclusions (event_id, giver_id, receiver_id)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [eventId, giverId, receiverId]
+    );
 
-  return result.rows[0];
+    return result.rows[0];
+  } catch (error: any) {
+    if (error && error.code === '23505') {
+      // Contrainte d'unicité violée : cette exclusion existe déjà pour cet événement
+      throw new Error('Cette exclusion existe déjà pour cet événement.');
+    }
+    throw error;
+  }
 };
 
 export const getEventExclusions = async (eventId: string, clientPool: typeof pool = pool): Promise<Exclusion[]> => {
