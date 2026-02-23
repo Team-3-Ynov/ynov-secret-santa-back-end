@@ -1,0 +1,275 @@
+# ═══════════════════════════════════════════════════════════════
+# Users Endpoints
+# ═══════════════════════════════════════════════════════════════
+
+/api/users/me:
+  get:
+    tags:
+      - Users
+    summary: Récupérer son propre profil
+    description: Retourne les informations complètes de l'utilisateur actuellement connecté (email inclus).
+    operationId: getMe
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Profil récupéré avec succès
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  type: object
+                  properties:
+                    user:
+                      $ref: "../openapi.yaml#/components/schemas/User"
+      "401":
+        description: Non authentifié
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Utilisateur non trouvé
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+            example:
+              success: false
+              message: Utilisateur non trouvé.
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+  put:
+    tags:
+      - Users
+    summary: Mettre à jour son profil
+    description: |
+      Met à jour l'email et/ou le nom d'utilisateur de l'utilisateur connecté.
+      
+      **Au moins un des deux champs doit être fourni.**
+      
+      **Règles du nom d'utilisateur:**
+      - Entre 3 et 50 caractères
+      - Lettres, chiffres et underscores uniquement
+    operationId: updateProfile
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../openapi.yaml#/components/schemas/UpdateProfileRequest"
+          examples:
+            updateUsername:
+              summary: Changer uniquement le nom d'utilisateur
+              value:
+                username: new_username
+            updateEmail:
+              summary: Changer uniquement l'email
+              value:
+                email: newemail@example.com
+            updateBoth:
+              summary: Changer les deux
+              value:
+                email: newemail@example.com
+                username: new_username
+    responses:
+      "200":
+        description: Profil mis à jour avec succès
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                message:
+                  type: string
+                  example: Profil mis à jour avec succès
+                data:
+                  type: object
+                  properties:
+                    user:
+                      $ref: "../openapi.yaml#/components/schemas/User"
+      "400":
+        description: Données invalides ou conflit (email/username déjà pris)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+            examples:
+              noField:
+                summary: Aucun champ fourni
+                value:
+                  success: false
+                  message: Au moins un champ (email ou username) doit être fourni
+              emailTaken:
+                summary: Email déjà utilisé
+                value:
+                  success: false
+                  message: Cet email est déjà utilisé par un autre compte
+              usernameTaken:
+                summary: Nom d'utilisateur déjà pris
+                value:
+                  success: false
+                  message: Ce nom d'utilisateur est déjà pris
+      "401":
+        description: Non authentifié
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/users/me/password:
+  put:
+    tags:
+      - Users
+    summary: Mettre à jour son mot de passe
+    description: |
+      Modifie le mot de passe de l'utilisateur connecté.
+      
+      **Le mot de passe actuel doit être fourni pour confirmer l'identité.**
+      
+      **Règles du nouveau mot de passe:**
+      - Minimum 8 caractères
+      - Au moins 1 majuscule (A-Z)
+      - Au moins 1 minuscule (a-z)
+      - Au moins 1 chiffre (0-9)
+    operationId: updatePassword
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../openapi.yaml#/components/schemas/UpdatePasswordRequest"
+          example:
+            currentPassword: AncienMotDePasse1
+            newPassword: NouveauMotDePasse1
+    responses:
+      "200":
+        description: Mot de passe mis à jour avec succès
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                message:
+                  type: string
+                  example: Mot de passe mis à jour avec succès
+      "400":
+        description: Données invalides ou mot de passe actuel incorrect
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+            examples:
+              wrongPassword:
+                summary: Mot de passe actuel incorrect
+                value:
+                  success: false
+                  message: Mot de passe actuel incorrect
+              weakPassword:
+                summary: Nouveau mot de passe trop faible
+                value:
+                  success: false
+                  message: Le nouveau mot de passe doit contenir au moins 8 caractères
+      "401":
+        description: Non authentifié
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/users/{id}:
+  get:
+    tags:
+      - Users
+    summary: Profil public d'un utilisateur
+    description: |
+      Retourne le profil public d'un utilisateur (sans données sensibles comme l'email).
+      
+      Utile pour afficher les participants d'un événement.
+    operationId: getPublicProfile
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: ID numérique de l'utilisateur
+        schema:
+          type: integer
+          example: 2
+    responses:
+      "200":
+        description: Profil public récupéré avec succès
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: "../openapi.yaml#/components/schemas/PublicUserProfile"
+      "400":
+        description: ID utilisateur invalide
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+            example:
+              success: false
+              message: ID utilisateur invalide.
+      "401":
+        description: Non authentifié
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Utilisateur non trouvé
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+            example:
+              success: false
+              message: Utilisateur non trouvé.
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+

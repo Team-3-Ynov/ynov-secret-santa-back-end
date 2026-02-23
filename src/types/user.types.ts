@@ -38,6 +38,16 @@ export interface LoginDTO {
   password: string;
 }
 
+export interface UpdateUserDTO {
+  email?: string;
+  username?: string;
+}
+
+export interface UpdatePasswordDTO {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface AuthResponse {
   user: UserWithoutPassword;
   token: string;
