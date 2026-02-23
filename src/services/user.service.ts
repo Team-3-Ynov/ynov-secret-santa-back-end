@@ -55,28 +55,22 @@ export const getPublicUserProfiles = async (userIds: number[]): Promise<PublicUs
  * Récupère les statistiques d'un utilisateur
  */
 export const getUserStats = async (userId: number): Promise<UserStats> => {
-  // Nombre d'événements créés
-  const eventsResult = await pool.query(
-    'SELECT COUNT(*) AS count FROM events WHERE owner_id = $1',
-    [userId]
-  );
-
-  // Nombre de participations (invitations acceptées)
-  const participationsResult = await pool.query(
-    'SELECT COUNT(*) AS count FROM invitations WHERE user_id = $1 AND status = $2',
+  const result = await pool.query(
+    `
+      SELECT
+        (SELECT COUNT(*) FROM events WHERE owner_id = $1) AS events_created,
+        (SELECT COUNT(*) FROM invitations WHERE user_id = $1 AND status = $2) AS participations,
+        (SELECT COUNT(*) FROM assignments WHERE giver_id = $1) AS gifts_offered
+    `,
     [userId, 'accepted']
   );
 
-  // Nombre de cadeaux offerts (assignments en tant que giver)
-  const giftsResult = await pool.query(
-    'SELECT COUNT(*) AS count FROM assignments WHERE giver_id = $1',
-    [userId]
-  );
+  const row = result.rows[0] || {};
 
   return {
-    eventsCreated: parseInt(eventsResult.rows[0]?.count || '0', 10),
-    participations: parseInt(participationsResult.rows[0]?.count || '0', 10),
-    giftsOffered: parseInt(giftsResult.rows[0]?.count || '0', 10),
+    eventsCreated: parseInt((row as any).events_created || '0', 10),
+    participations: parseInt((row as any).participations || '0', 10),
+    giftsOffered: parseInt((row as any).gifts_offered || '0', 10),
   };
 };
 /**
