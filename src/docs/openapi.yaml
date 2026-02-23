@@ -24,6 +24,8 @@ tags:
     description: Authentification et gestion des comptes
   - name: Events
     description: Gestion des événements Secret Santa
+  - name: Users
+    description: Gestion du profil utilisateur
 
 components:
   securitySchemes:
