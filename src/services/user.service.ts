@@ -14,6 +14,8 @@ export interface UserStats {
   eventsCreated: number;
   participations: number;
   giftsOffered: number;
+}
+
 export interface UpdateProfileResult {
   success: boolean;
   user?: UserWithoutPassword;
@@ -78,6 +80,7 @@ export const getUserStats = async (userId: number): Promise<UserStats> => {
   };
 };
 
+/**
  * Met à jour le profil d'un utilisateur (email et/ou username)
  */
 export const updateUserProfile = async (
