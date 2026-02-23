@@ -8,6 +8,7 @@ import {
 } from '../utils/jwt.utils';
 import { RegisterInput, LoginInput } from '../schemas/auth.schema';
 import { AuthenticatedRequest } from '../middlewares/auth.middleware';
+import { getUserStats } from '../services/user.service';
 
 export const AuthController = {
   /**
@@ -16,7 +17,7 @@ export const AuthController = {
    */
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, username }: RegisterInput = req.body;
+      const { email, password, username, first_name, last_name }: RegisterInput = req.body;
 
       // Vérifications existantes...
       const emailExists = await UserModel.emailExists(email);
@@ -36,6 +37,8 @@ export const AuthController = {
         email,
         password,
         username,
+        first_name,
+        last_name,
       });
 
       // Génération des tokens
@@ -219,9 +222,12 @@ export const AuthController = {
         return;
       }
 
+      // Récupérer les statistiques de l'utilisateur
+      const stats = await getUserStats(userId);
+
       res.status(200).json({
         success: true,
-        data: { user },
+        data: { user: { ...user, stats } },
       });
     } catch (error) {
       console.error('Erreur lors de la récupération du profil:', error);

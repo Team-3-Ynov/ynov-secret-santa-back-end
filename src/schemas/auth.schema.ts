@@ -17,6 +17,8 @@ export const registerSchema = z.object({
     .min(3, 'Le nom d\'utilisateur doit contenir au moins 3 caractères')
     .max(50, 'Le nom d\'utilisateur ne peut pas dépasser 50 caractères')
     .regex(/^[a-zA-Z0-9_]+$/, 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres et underscores'),
+  first_name: z.string().max(100).optional(),
+  last_name: z.string().max(100).optional(),
 });
 
 export const loginSchema = z.object({

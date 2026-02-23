@@ -116,7 +116,7 @@ describe('UserModel', () => {
       const result = await UserModel.findById(1);
 
       expect(pool.query).toHaveBeenCalledWith(
-        'SELECT id, email, username, created_at, updated_at FROM users WHERE id = $1',
+        'SELECT id, email, username, first_name, last_name, created_at, updated_at FROM users WHERE id = $1',
         [1]
       );
       expect(result).toEqual(mockUser);
