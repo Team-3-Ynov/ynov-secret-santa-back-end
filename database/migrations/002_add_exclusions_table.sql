@@ -7,5 +7,6 @@ CREATE TABLE event_exclusions (
     giver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    UNIQUE (event_id, giver_id, receiver_id)
+    UNIQUE (event_id, giver_id, receiver_id),
+    CHECK (giver_id <> receiver_id)
 );
