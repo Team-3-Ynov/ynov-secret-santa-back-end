@@ -79,7 +79,7 @@ export const getUserStats = async (userId: number): Promise<UserStats> => {
     giftsOffered: parseInt(giftsResult.rows[0]?.count || '0', 10),
   };
 };
-
+/**
 /**
  * Met à jour le profil d'un utilisateur (email et/ou username)
  */
