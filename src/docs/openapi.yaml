@@ -24,6 +24,8 @@ tags:
     description: Authentification et gestion des comptes
   - name: Events
     description: Gestion des événements Secret Santa
+  - name: Users
+    description: Gestion du profil utilisateur
 
 components:
   securitySchemes:
@@ -226,3 +228,56 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    # ═══════════════════════════════════════════════════════════════
+    # User Profile Schemas
+    # ═══════════════════════════════════════════════════════════════
+    PublicUserProfile:
+      type: object
+      description: Profil public d'un utilisateur (sans données sensibles)
+      properties:
+        id:
+          type: integer
+          description: ID unique de l'utilisateur
+          example: 2
+        username:
+          type: string
+          description: Nom d'utilisateur
+          example: john_doe
+        created_at:
+          type: string
+          format: date-time
+          description: Date de création du compte
+
+    UpdateProfileRequest:
+      type: object
+      description: "Au moins un des deux champs (email ou username) est requis"
+      properties:
+        email:
+          type: string
+          format: email
+          description: Nouvelle adresse email
+          example: newemail@example.com
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: "Nouveau nom d'utilisateur (lettres, chiffres, underscores)"
+          example: new_username
+
+    UpdatePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          description: Mot de passe actuel (pour confirmer l'identité)
+          example: AncienMotDePasse1
+        newPassword:
+          type: string
+          minLength: 8
+          description: "Nouveau mot de passe (min 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre)"
+          example: NouveauMotDePasse1
+
