@@ -325,7 +325,33 @@ export const addExclusionHandler = async (req: Request, res: Response) => {
     return res.status(201).json({ success: true, data: allExclusions });
   } catch (error: any) {
     console.error('Erreur lors de l\'ajout de l\'exclusion:', error);
-    return res.status(500).json({ success: false, message: error.message || 'Impossible d\'ajouter l\'exclusion.' });
+
+    const errorStatus =
+      typeof error?.statusCode === 'number'
+        ? error.statusCode
+        : typeof error?.status === 'number'
+          ? error.status
+          : error?.code === 'P2002' || error?.code === '23505'
+            ? 409
+            : 500;
+
+    let clientMessage: string;
+    switch (errorStatus) {
+      case 400:
+        clientMessage = 'Requête invalide.';
+        break;
+      case 403:
+        clientMessage = 'Accès refusé.';
+        break;
+      case 409:
+        clientMessage = 'Conflit lors de l\'ajout de l\'exclusion.';
+        break;
+      default:
+        clientMessage = 'Impossible d\'ajouter l\'exclusion.';
+        break;
+    }
+
+    return res.status(errorStatus).json({ success: false, message: clientMessage });
   }
 };
 
