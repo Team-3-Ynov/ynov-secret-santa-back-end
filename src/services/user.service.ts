@@ -15,7 +15,6 @@ export interface UserStats {
   participations: number;
   giftsOffered: number;
 }
-}
 
 export interface UpdateProfileResult {
   success: boolean;
