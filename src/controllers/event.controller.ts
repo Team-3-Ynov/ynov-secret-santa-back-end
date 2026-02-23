@@ -389,6 +389,11 @@ export const deleteExclusionHandler = async (req: Request, res: Response) => {
     return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
 
+  const parsedExclusionId = parseInt(exclusionId, 10);
+  if (!Number.isFinite(parsedExclusionId)) {
+    return res.status(400).json({ success: false, message: 'L\'identifiant de l\'exclusion est invalide.' });
+  }
+
   try {
     const event = await findEventById(eventId);
     if (!event) {
@@ -399,7 +404,7 @@ export const deleteExclusionHandler = async (req: Request, res: Response) => {
       return res.status(403).json({ success: false, message: 'Vous n\'êtes pas autorisé à supprimer une exclusion de cet événement.' });
     }
 
-    const success = await deleteExclusion(eventId, parseInt(exclusionId, 10));
+    const success = await deleteExclusion(eventId, parsedExclusionId);
     if (!success) {
       return res.status(404).json({ success: false, message: 'Exclusion non trouvée.' });
     }
