@@ -127,7 +127,7 @@ export const UserModel = {
       UPDATE users 
       SET ${fields.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, email, username, created_at, updated_at
+      RETURNING id, email, username, first_name, last_name, created_at, updated_at
     `;
 
     const result = await pool.query(query, values);
