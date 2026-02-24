@@ -34,7 +34,7 @@ export const createEventHandler = async (req: Request, res: Response) => {
 };
 
 export const getEventHandler = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const userId = (req as any).user?.id;
 
   if (!userId) {
@@ -55,7 +55,7 @@ export const getEventHandler = async (req: Request, res: Response) => {
 };
 
 export const updateEventHandler = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const userId = (req as any).user.id;
 
   const parsed = updateEventSchema.safeParse(req.body);
@@ -82,7 +82,7 @@ export const updateEventHandler = async (req: Request, res: Response) => {
 };
 
 export const deleteEventHandler = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = req.params.id as string;
   const userId = (req as any).user?.id;
 
   if (!userId) {
@@ -109,7 +109,7 @@ export const deleteEventHandler = async (req: Request, res: Response) => {
 
 export const inviteUserHandler = async (req: Request, res: Response) => {
   try {
-    const { id: eventId } = req.params;
+    const eventId = req.params.id as string;
     const { email } = req.body;
 
     const parsed = invitationSchema.safeParse({ email });
@@ -139,7 +139,7 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
 
 export const joinEventHandler = async (req: Request, res: Response) => {
   try {
-    const { id: eventId } = req.params;
+    const eventId = req.params.id as string;
     const userId = (req as any).user.id;
     const email = (req as any).user.email;
 
@@ -158,7 +158,7 @@ export const joinEventHandler = async (req: Request, res: Response) => {
 
 export const drawEventHandler = async (req: Request, res: Response) => {
   try {
-    const { id: eventId } = req.params;
+    const eventId = req.params.id as string;
     const userId = (req as any).user.id;
 
     // Vérifier que c'est l'owner
@@ -182,7 +182,7 @@ export const drawEventHandler = async (req: Request, res: Response) => {
 
 export const getAssignmentHandler = async (req: Request, res: Response) => {
   try {
-    const { id: eventId } = req.params;
+    const eventId = req.params.id as string;
     const userId = (req as any).user.id;
 
     const assignment = await getAssignment(eventId, userId);
@@ -219,7 +219,7 @@ export const getUserEventsHandler = async (req: Request, res: Response) => {
 
 export const getEventParticipantsHandler = async (req: Request, res: Response) => {
   try {
-    const { id: eventId } = req.params;
+    const eventId = req.params.id as string;
     const userId = (req as any).user?.id;
 
     if (!userId) {
@@ -236,7 +236,7 @@ export const getEventParticipantsHandler = async (req: Request, res: Response) =
 
 export const getEventInvitationsHandler = async (req: Request, res: Response) => {
   try {
-    const { id: eventId } = req.params;
+    const eventId = req.params.id as string;
     const userId = (req as any).user?.id;
 
     if (!userId) {
@@ -264,7 +264,8 @@ export const getEventInvitationsHandler = async (req: Request, res: Response) =>
 
 export const deleteInvitationHandler = async (req: Request, res: Response) => {
   try {
-    const { id: eventId, invitationId } = req.params;
+    const eventId = req.params.id as string;
+    const invitationId = req.params.invitationId as string;
     const userId = (req as any).user?.id;
 
     if (!userId) {
@@ -302,7 +303,7 @@ export const deleteInvitationHandler = async (req: Request, res: Response) => {
 };
 
 export const addExclusionHandler = async (req: Request, res: Response) => {
-  const { id: eventId } = req.params;
+  const eventId = req.params.id as string;
   const userId = (req as any).user?.id;
   const { giverId, receiverId } = req.body;
 
@@ -356,7 +357,7 @@ export const addExclusionHandler = async (req: Request, res: Response) => {
 };
 
 export const getEventExclusionsHandler = async (req: Request, res: Response) => {
-  const { id: eventId } = req.params;
+  const eventId = req.params.id as string;
   const userId = (req as any).user?.id;
 
   if (!userId) {
@@ -382,7 +383,8 @@ export const getEventExclusionsHandler = async (req: Request, res: Response) => 
 };
 
 export const deleteExclusionHandler = async (req: Request, res: Response) => {
-  const { id: eventId, exclusionId } = req.params;
+  const eventId = req.params.id as string;
+  const exclusionId = req.params.exclusionId as string;
   const userId = (req as any).user?.id;
 
   if (!userId) {

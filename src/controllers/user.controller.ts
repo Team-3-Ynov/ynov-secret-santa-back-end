@@ -14,7 +14,7 @@ import { UpdateProfileInput, UpdatePasswordInput } from '../schemas/user.schema'
  */
 export const getPublicProfileHandler = async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.id, 10);
+    const userId = parseInt(req.params.id as string, 10);
 
     if (isNaN(userId)) {
       return res.status(400).json({ success: false, message: 'ID utilisateur invalide.' });
