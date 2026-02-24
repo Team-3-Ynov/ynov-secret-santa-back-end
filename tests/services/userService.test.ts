@@ -1,4 +1,4 @@
-import { getPublicUserProfile, getPublicUserProfiles, getUserStats, updateUserProfile, updateUserPassword } from '../../src/services/user.service';
+import { getPublicUserProfile, getUserStats, updateUserProfile, updateUserPassword } from '../../src/services/user.service';
 import { pool } from '../../src/config/database';
 import { UserModel } from '../../src/models/user.model';
 
