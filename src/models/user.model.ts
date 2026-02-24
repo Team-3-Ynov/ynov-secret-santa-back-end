@@ -104,7 +104,7 @@ export const UserModel = {
    */
   async update(id: number, data: UpdateUserDTO): Promise<UserWithoutPassword | null> {
     const fields: string[] = [];
-    const values: (string | number)[] = [];
+    const values: (string | number | null)[] = [];
     let paramIndex = 1;
 
     if (data.email !== undefined) {
@@ -115,6 +115,16 @@ export const UserModel = {
     if (data.username !== undefined) {
       fields.push(`username = $${paramIndex++}`);
       values.push(data.username);
+    }
+
+    if (data.first_name !== undefined) {
+      fields.push(`first_name = $${paramIndex++}`);
+      values.push(data.first_name || null);
+    }
+
+    if (data.last_name !== undefined) {
+      fields.push(`last_name = $${paramIndex++}`);
+      values.push(data.last_name || null);
     }
 
     if (fields.length === 0) {
