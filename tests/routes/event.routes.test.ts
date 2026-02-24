@@ -13,6 +13,12 @@ jest.mock('../../src/middlewares/auth.middleware', () => ({
 // Mock du service email pour éviter les erreurs de connexion SMTP
 jest.mock('../../src/services/email.service', () => ({
   sendInvitationEmail: jest.fn().mockResolvedValue(undefined),
+  sendDrawResultEmail: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Mock du service notification pour éviter les appels BDD
+jest.mock('../../src/services/notification.service', () => ({
+  createNotification: jest.fn().mockResolvedValue(undefined),
 }));
 
 // Mock de la couche service pour ne pas toucher la BDD
@@ -79,7 +85,7 @@ jest.mock('../../src/services/event.service', () => ({
   findInvitationById: jest.fn(),
   deleteInvitation: jest.fn().mockResolvedValue(true),
   joinEvent: jest.fn(),
-  performDraw: jest.fn(),
+  performDraw: jest.fn().mockResolvedValue({ assignments: [], notifications: [] }),
   getAssignment: jest.fn(),
   getEventsByUserId: jest.fn(),
   getEventParticipants: jest.fn(),
@@ -420,7 +426,18 @@ describe('POST /api/events/:id/draw', () => {
 
   it('should perform draw successfully', async () => {
     (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (eventService.performDraw as jest.Mock).mockResolvedValue([mockAssignment]);
+    (eventService.performDraw as jest.Mock).mockResolvedValue({
+      assignments: [mockAssignment],
+      notifications: [
+        {
+          giverId: 1,
+          giverEmail: 'test@example.com',
+          giverUsername: 'test',
+          receiverUsername: 'participant1',
+          eventTitle: 'Original Title',
+        },
+      ],
+    });
 
     const res = await request(app)
       .post(`/api/events/${mockEvent.id}/draw`);
@@ -428,6 +445,7 @@ describe('POST /api/events/:id/draw', () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.message).toBe('Tirage effectué avec succès !');
+    expect(res.body.count).toBe(1);
   });
 
   it('should return 403 if user is not the owner', async () => {

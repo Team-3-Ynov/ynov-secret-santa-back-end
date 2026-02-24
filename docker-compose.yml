@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════
 # Docker Compose
 # ═══════════════════════════════════════════════════════════════
-# 
+#
 # Using profiles to handle different environments
 # docker compose -f docker-compose.yml --profile all up   # all services
 # docker compose -f docker-compose.yml --profile infra up # infra services

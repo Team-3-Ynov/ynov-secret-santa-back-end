@@ -104,16 +104,31 @@ describe('EventService - Unified Dependency Injection Tests', () => {
         it('should perform a draw successfully', async () => {
             mockClientQuery
                 .mockResolvedValueOnce({ command: 'BEGIN' })
-                .mockResolvedValueOnce({ rows: [{ user_id: 1 }, { user_id: 2 }], rowCount: 2 }) // participants
+                .mockResolvedValueOnce({ rows: [{ title: 'Test Event' }] }) // event title
+                .mockResolvedValueOnce({
+                    rows: [
+                        { user_id: 1, email: 'user1@example.com', username: 'user1' },
+                        { user_id: 2, email: 'user2@example.com', username: 'user2' },
+                    ],
+                    rowCount: 2,
+                }) // participants with user info
                 .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
                 .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // exclusions
-                .mockResolvedValueOnce({ rows: [{ giver_id: 1, receiver_id: 2 }], rowCount: 1 }) // insert 1
-                .mockResolvedValueOnce({ rows: [{ giver_id: 2, receiver_id: 1 }], rowCount: 1 }) // insert 2
+                .mockResolvedValueOnce({ rows: [{ id: 'a1', giver_id: 1, receiver_id: 2 }], rowCount: 1 }) // insert 1
+                .mockResolvedValueOnce({ rows: [{ id: 'a2', giver_id: 2, receiver_id: 1 }], rowCount: 1 }) // insert 2
                 .mockResolvedValueOnce({ command: 'COMMIT' });
 
             const result = await performDraw('event-1', mockPool);
 
-            expect(result).toHaveLength(2);
+            expect(result.assignments).toHaveLength(2);
+            expect(result.notifications).toHaveLength(2);
+            expect(result.notifications[0]).toMatchObject({
+                giverId: expect.any(Number),
+                giverEmail: expect.any(String),
+                giverUsername: expect.any(String),
+                receiverUsername: expect.any(String),
+                eventTitle: 'Test Event',
+            });
             expect(mockClientQuery).toHaveBeenCalledWith('COMMIT');
         });
 
@@ -122,35 +137,30 @@ describe('EventService - Unified Dependency Injection Tests', () => {
             // Exclusion: giver 1 cannot draw receiver 2
             mockClientQuery
                 .mockResolvedValueOnce({ command: 'BEGIN' })
+                .mockResolvedValueOnce({ rows: [{ title: 'Test Event' }] }) // event title
                 .mockResolvedValueOnce({
-                    rows: [{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }],
+                    rows: [
+                        { user_id: 1, email: 'user1@example.com', username: 'user1' },
+                        { user_id: 2, email: 'user2@example.com', username: 'user2' },
+                        { user_id: 3, email: 'user3@example.com', username: 'user3' },
+                    ],
                     rowCount: 3,
-                }) // participants
+                }) // participants with user info
                 .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
                 .mockResolvedValueOnce({
                     rows: [{ giver_id: 1, receiver_id: 2 }],
                     rowCount: 1,
                 }) // exclusions
-                // Inserted assignments (none should match the excluded pair 1 -> 2)
-                .mockResolvedValueOnce({
-                    rows: [{ giver_id: 1, receiver_id: 3 }],
-                    rowCount: 1,
-                }) // insert 1
-                .mockResolvedValueOnce({
-                    rows: [{ giver_id: 2, receiver_id: 1 }],
-                    rowCount: 1,
-                }) // insert 2
-                .mockResolvedValueOnce({
-                    rows: [{ giver_id: 3, receiver_id: 2 }],
-                    rowCount: 1,
-                }) // insert 3
+                .mockResolvedValueOnce({ rows: [{ id: 'a1', giver_id: 1, receiver_id: 3 }], rowCount: 1 }) // insert 1
+                .mockResolvedValueOnce({ rows: [{ id: 'a2', giver_id: 2, receiver_id: 1 }], rowCount: 1 }) // insert 2
+                .mockResolvedValueOnce({ rows: [{ id: 'a3', giver_id: 3, receiver_id: 2 }], rowCount: 1 }) // insert 3
                 .mockResolvedValueOnce({ command: 'COMMIT' });
 
             const result = await performDraw('event-1', mockPool);
 
-            expect(result).toHaveLength(3);
+            expect(result.assignments).toHaveLength(3);
             // Ensure no assignment matches the excluded pair (1 -> 2)
-            const hasExcludedPair = result.some(
+            const hasExcludedPair = result.assignments.some(
                 (assignment: { giver_id: number; receiver_id: number }) =>
                     assignment.giver_id === 1 && assignment.receiver_id === 2,
             );
@@ -163,10 +173,14 @@ describe('EventService - Unified Dependency Injection Tests', () => {
             // Exclusions: 1 -> 2 and 2 -> 1 (no valid assignments possible)
             mockClientQuery
                 .mockResolvedValueOnce({ command: 'BEGIN' })
+                .mockResolvedValueOnce({ rows: [{ title: 'Test Event' }] }) // event title
                 .mockResolvedValueOnce({
-                    rows: [{ user_id: 1 }, { user_id: 2 }],
+                    rows: [
+                        { user_id: 1, email: 'user1@example.com', username: 'user1' },
+                        { user_id: 2, email: 'user2@example.com', username: 'user2' },
+                    ],
                     rowCount: 2,
-                }) // participants
+                }) // participants with user info
                 .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
                 .mockResolvedValueOnce({
                     rows: [

@@ -49,3 +49,47 @@ export const sendInvitationEmail = async (to: string, eventTitle: string, invite
         throw error;
     }
 };
+
+export const sendDrawResultEmail = async (
+    to: string,
+    giverUsername: string,
+    receiverUsername: string,
+    eventTitle: string
+) => {
+    if (!isDev && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
+        console.warn('⚠️ SMTP credentials not found. Email not sent.');
+        console.log(`[MOCK EMAIL] Draw result - To: ${to}, Receiver: ${receiverUsername}`);
+        return;
+    }
+
+    const mailOptions = {
+        from: process.env.SMTP_FROM || '"Secret Santa" <noreply@secretsanta.com>',
+        to,
+        subject: `🎅 Résultat du tirage Secret Santa : ${eventTitle}`,
+        html: `
+      <h1>🎁 Le tirage a été effectué !</h1>
+      <p>Bonjour <strong>${giverUsername}</strong>,</p>
+      <p>Le tirage au sort pour l'évènement Secret Santa <strong>${eventTitle}</strong> vient d'être réalisé.</p>
+      <p>Vous avez été désigné(e) pour offrir un cadeau à :</p>
+      <div style="margin: 20px 0; padding: 15px; background-color: #f0f4ff; border-left: 4px solid #4F46E5; border-radius: 4px;">
+        <h2 style="margin: 0; color: #4F46E5;">🎄 ${receiverUsername}</h2>
+      </div>
+      <p>Gardez ce secret jusqu'au jour J ! 🤫</p>
+      <p style="color: #888; font-size: 12px;">Cet email est confidentiel, ne le partagez pas.</p>
+    `,
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log('📧 Email de tirage envoyé: %s', info.messageId);
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'envoi de l\'email de tirage:', error);
+        if (isDev) {
+            console.warn('⚠️ [DEV MODE] Email non envoyé - MailHog probablement non démarré');
+            console.log(`[MOCK EMAIL] Draw result - To: ${to}, Receiver: ${receiverUsername}`);
+            return;
+        }
+        throw error;
+    }
+};
+

@@ -57,7 +57,7 @@ Créez un fichier `.env` à la racine du projet :
 NODE_ENV=development
 
 # Configuration du serveur
-PORT=3000
+PORT=3001
 
 # Configuration de la base de données PostgreSQL
 DB_HOST=localhost
@@ -69,6 +69,15 @@ DB_PASSWORD=postgres
 # Configuration JWT
 JWT_SECRET=your-super-secret-key-change-this-in-production
 JWT_EXPIRES_IN=7d
+
+# SMTP / MailHog (développement)
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USER=test
+SMTP_PASS=test
+
+# URL du frontend (pour les liens dans les emails)
+FRONTEND_URL=http://localhost:3000
 
 # Mapping postgres port on docker
 POSTGRES_PORT_MAPPING=5432:5432
@@ -90,7 +99,13 @@ Cela démarre :
 
 > 💡 Accédez à <http://localhost:8025> pour voir les emails envoyés en développement.
 
-### 5. Lancer le serveur backend
+### 5. Appliquer les migrations
+
+```bash
+pnpm migrate
+```
+
+### 6. Lancer le serveur backend
 
 ```bash
 pnpm dev
@@ -123,7 +138,7 @@ docker compose restart postgres
 
 | Variable | Description | Valeur par défaut |
 |----------|-------------|-------------------|
-| `PORT` | Port du serveur | `3000` |
+| `PORT` | Port du serveur | `3001` |
 | `DB_HOST` | Hôte PostgreSQL | `localhost` |
 | `DB_PORT` | Port PostgreSQL | `5432` |
 | `DB_NAME` | Nom de la base | `secret_santa` |
@@ -132,6 +147,11 @@ docker compose restart postgres
 | `JWT_SECRET` | Clé secrète JWT | - |
 | `JWT_EXPIRES_IN` | Durée de validité du token | `7d` |
 | `NODE_ENV` | Environnement | `development` |
+| `SMTP_HOST` | Hôte SMTP | `localhost` |
+| `SMTP_PORT` | Port SMTP | `1025` |
+| `SMTP_USER` | Utilisateur SMTP | - |
+| `SMTP_PASS` | Mot de passe SMTP | - |
+| `FRONTEND_URL` | URL du frontend | `http://localhost:3000` |
 
 ## 📜 Commandes disponibles
 
@@ -149,11 +169,13 @@ docker compose restart postgres
 
 La documentation Swagger est disponible à l'adresse :
 
-**<http://localhost:3000/api-docs>**
+**<http://localhost:3001/api-docs>**
+
+> 💡 MailHog (visualisation des emails) : **<http://localhost:8025>**
 
 Vous pouvez également récupérer la spécification OpenAPI au format JSON :
 
-**<http://localhost:3000/api-docs.json>**
+**<http://localhost:3001/api-docs.json>**
 
 ## 🔗 Endpoints
 
@@ -161,7 +183,6 @@ Vous pouvez également récupérer la spécification OpenAPI au format JSON :
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/` | Page d'accueil |
 | `GET` | `/health` | Vérifier la connexion à la base de données |
 
 ### Authentification
@@ -170,13 +191,55 @@ Vous pouvez également récupérer la spécification OpenAPI au format JSON :
 |---------|-------|-------------|
 | `POST` | `/api/auth/register` | Créer un compte |
 | `POST` | `/api/auth/login` | Se connecter |
+| `POST` | `/api/auth/refresh` | Rafraîchir le token JWT |
+| `POST` | `/api/auth/logout` | Se déconnecter |
+
+### Utilisateurs
+
+| Méthode | Route | Description | Auth |
+|---------|-------|-------------|------|
+| `GET` | `/api/users/me` | Récupérer son profil | ✅ |
+| `PUT` | `/api/users/me` | Mettre à jour son profil | ✅ |
+| `PUT` | `/api/users/me/password` | Changer son mot de passe | ✅ |
+| `GET` | `/api/users/:id/public` | Profil public d'un utilisateur | ✅ |
+
+### Événements
+
+| Méthode | Route | Description | Auth |
+|---------|-------|-------------|------|
+| `POST` | `/api/events` | Créer un événement | ✅ |
+| `GET` | `/api/events` | Lister mes événements | ✅ |
+| `GET` | `/api/events/:id` | Détails d'un événement | ✅ |
+| `PUT` | `/api/events/:id` | Modifier un événement | ✅ |
+| `DELETE` | `/api/events/:id` | Supprimer un événement | ✅ |
+| `POST` | `/api/events/:id/invite` | Inviter un utilisateur | ✅ |
+| `GET` | `/api/events/:id/invitations` | Lister les invitations | ✅ |
+| `DELETE` | `/api/events/:id/invitations/:invitationId` | Annuler une invitation | ✅ |
+| `POST` | `/api/events/:id/join` | Rejoindre un événement | ✅ |
+| `GET` | `/api/events/:id/participants` | Lister les participants | ✅ |
+| `PATCH` | `/api/events/:id/exclusions` | Ajouter une exclusion | ✅ |
+| `GET` | `/api/events/:id/exclusions` | Lister les exclusions | ✅ |
+| `DELETE` | `/api/events/:id/exclusions/:exclusionId` | Supprimer une exclusion | ✅ |
+| `POST` | `/api/events/:id/draw` | Lancer le tirage au sort | ✅ |
+| `GET` | `/api/events/:id/my-assignment` | Voir son assignation | ✅ |
+
+### Notifications 🔔
+
+| Méthode | Route | Description | Auth |
+|---------|-------|-------------|------|
+| `GET` | `/api/notifications` | Lister mes notifications + `unreadCount` | ✅ |
+| `GET` | `/api/notifications/unread-count` | Nombre de notifications non lues | ✅ |
+| `PATCH` | `/api/notifications/read-all` | Tout marquer comme lu | ✅ |
+| `PATCH` | `/api/notifications/:id/read` | Marquer une notification comme lue | ✅ |
+
+> 💡 Après un tirage au sort, chaque participant reçoit automatiquement une notification en base de données **et** un email lui indiquant à qui il doit offrir un cadeau.
 
 ### Exemples de requêtes
 
 #### Inscription
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/register \
+curl -X POST http://localhost:3001/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -188,12 +251,26 @@ curl -X POST http://localhost:3000/api/auth/register \
 #### Connexion
 
 ```bash
-curl -X POST http://localhost:3000/api/auth/login \
+curl -X POST http://localhost:3001/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
     "password": "MonMotDePasse123"
   }'
+```
+
+#### Récupérer ses notifications
+
+```bash
+curl -X GET http://localhost:3001/api/notifications \
+  -H "Authorization: Bearer <token>"
+```
+
+#### Marquer toutes les notifications comme lues
+
+```bash
+curl -X PATCH http://localhost:3001/api/notifications/read-all \
+  -H "Authorization: Bearer <token>"
 ```
 
 ### Règles de validation
@@ -229,7 +306,8 @@ pnpm test:coverage
 
 | Module | Couverture |
 |--------|------------|
-| Controllers | ~96% |
+| Controllers | ~95% |
+| Services | ~80% |
 | Middlewares | 100% |
 | Models | 100% |
 | Schemas | 100% |
@@ -240,27 +318,47 @@ pnpm test:coverage
 ```
 src/
 ├── config/
-│   ├── database.ts         # Configuration PostgreSQL
-│   └── swagger.ts          # Configuration Swagger
+│   ├── database.ts              # Configuration PostgreSQL
+│   └── swagger.ts               # Configuration Swagger
 ├── controllers/
-│   └── auth.controller.ts  # Logique d'authentification
+│   ├── auth.controller.ts       # Authentification
+│   ├── event.controller.ts      # Événements
+│   ├── notification.controller.ts # Notifications
+│   └── user.controller.ts       # Utilisateurs
 ├── middlewares/
+│   ├── auth.middleware.ts        # Vérification JWT
 │   └── validation.middleware.ts  # Validation Zod
 ├── models/
-│   └── user.model.ts       # Requêtes SQL utilisateurs
+│   ├── assignment.model.ts       # Assignations
+│   ├── event.model.ts            # Événements
+│   ├── exclusion.model.ts        # Exclusions
+│   ├── invitation.model.ts       # Invitations
+│   ├── notification.model.ts     # Notifications
+│   ├── refresh_token.model.ts    # Refresh tokens
+│   └── user.model.ts             # Utilisateurs
 ├── routes/
-│   └── auth.routes.ts      # Routes d'authentification
+│   ├── auth.routes.ts            # Routes auth
+│   ├── event.routes.ts           # Routes événements
+│   ├── notification.routes.ts    # Routes notifications
+│   └── user.routes.ts            # Routes utilisateurs
+├── services/
+│   ├── email.service.ts          # Envoi d'emails (invitation + résultat tirage)
+│   ├── event.service.ts          # Logique métier événements
+│   ├── notification.service.ts   # Logique métier notifications
+│   └── user.service.ts           # Logique métier utilisateurs
 ├── schemas/
-│   └── auth.schema.ts      # Schémas de validation
+│   └── auth.schema.ts            # Schémas de validation
 ├── types/
-│   └── user.types.ts       # Types TypeScript
+│   └── user.types.ts             # Types TypeScript
 ├── utils/
-│   └── jwt.utils.ts        # Utilitaires JWT
-└── index.ts                # Point d'entrée
+│   └── jwt.utils.ts              # Utilitaires JWT
+└── index.ts                      # Point d'entrée
 
 database/
 └── migrations/
-    └── 001_create_users_table.sql
+    ├── 001_init_schema.sql           # Users, Events, Invitations, Assignments
+    ├── 002_add_exclusions_table.sql  # Exclusions de tirage
+    └── 003_add_notifications_table.sql # Notifications in-app
 ```
 
 ## 🐳 Docker
@@ -286,6 +384,7 @@ docker-compose down
 ```bash
 docker-compose down -v
 docker-compose up -d
+pnpm migrate
 ```
 
 ## 📧 Test des Emails
@@ -297,11 +396,11 @@ Pour tester l'envoi d'emails sans utiliser de véritable adresse, ce projet util
 1. Démarrer les services Docker (Postgres + MailHog) :
 
     ```bash
-    docker-compose up -d
+    docker compose --profile infra up -d
     ```
 
 2. Accéder à l'interface MailHog : [http://localhost:8025](http://localhost:8025)
-3. Vérifier que le fichier `.env` est configuré pour MailHog (par défaut) :
+3. Vérifier que le fichier `.env` est configuré pour MailHog :
 
     ```env
     SMTP_HOST=localhost
@@ -315,8 +414,9 @@ Pour tester l'envoi d'emails sans utiliser de véritable adresse, ce projet util
 Un script utilitaire est disponible pour vérifier rapidement la configuration :
 
 ```bash
-# Envoyer un email de test à une adresse spécifiée
 npx ts-node scripts/send-test-email.ts
 ```
 
 L'email apparaîtra dans l'interface MailHog (si configuré) ou sera envoyé réellement (si configuration SMTP réelle).
+
+
