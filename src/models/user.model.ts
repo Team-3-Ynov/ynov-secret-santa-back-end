@@ -14,11 +14,11 @@ export const UserModel = {
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
 
     const query = `
-      INSERT INTO users (email, password, username)
-      VALUES ($1, $2, $3)
-      RETURNING id, email, username, created_at, updated_at
+      INSERT INTO users (email, password, username, first_name, last_name)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, email, username, first_name, last_name, created_at, updated_at
     `;
-    const values = [userData.email, hashedPassword, userData.username];
+    const values = [userData.email, hashedPassword, userData.username, userData.first_name ?? null, userData.last_name ?? null];
     const result = await pool.query(query, values);
     return result.rows[0];
   },
@@ -49,7 +49,7 @@ export const UserModel = {
    * Trouve un utilisateur par son ID
    */
   async findById(id: number): Promise<UserWithoutPassword | null> {
-    const query = 'SELECT id, email, username, created_at, updated_at FROM users WHERE id = $1';
+    const query = 'SELECT id, email, username, first_name, last_name, created_at, updated_at FROM users WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows[0] || null;
   },
@@ -104,7 +104,7 @@ export const UserModel = {
    */
   async update(id: number, data: UpdateUserDTO): Promise<UserWithoutPassword | null> {
     const fields: string[] = [];
-    const values: (string | number)[] = [];
+    const values: (string | number | null)[] = [];
     let paramIndex = 1;
 
     if (data.email !== undefined) {
@@ -117,6 +117,16 @@ export const UserModel = {
       values.push(data.username);
     }
 
+    if (data.first_name !== undefined) {
+      fields.push(`first_name = $${paramIndex++}`);
+      values.push(data.first_name || null);
+    }
+
+    if (data.last_name !== undefined) {
+      fields.push(`last_name = $${paramIndex++}`);
+      values.push(data.last_name || null);
+    }
+
     if (fields.length === 0) {
       return this.findById(id);
     }
@@ -127,7 +137,7 @@ export const UserModel = {
       UPDATE users 
       SET ${fields.join(', ')}
       WHERE id = $${paramIndex}
-      RETURNING id, email, username, created_at, updated_at
+      RETURNING id, email, username, first_name, last_name, created_at, updated_at
     `;
 
     const result = await pool.query(query, values);

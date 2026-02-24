@@ -12,8 +12,16 @@ export const updateProfileSchema = z.object({
     .max(50, 'Le nom d\'utilisateur ne peut pas dépasser 50 caractères')
     .regex(/^[a-zA-Z0-9_]+$/, 'Le nom d\'utilisateur ne peut contenir que des lettres, chiffres et underscores')
     .optional(),
-}).refine(data => data.email !== undefined || data.username !== undefined, {
-  message: 'Au moins un champ (email ou username) doit être fourni',
+  first_name: z
+    .string()
+    .max(100, 'Le prénom ne peut pas dépasser 100 caractères')
+    .optional(),
+  last_name: z
+    .string()
+    .max(100, 'Le nom ne peut pas dépasser 100 caractères')
+    .optional(),
+}).refine(data => data.email !== undefined || data.username !== undefined || data.first_name !== undefined || data.last_name !== undefined, {
+  message: 'Au moins un champ (email, username, prénom ou nom) doit être fourni',
 });
 
 export const updatePasswordSchema = z.object({

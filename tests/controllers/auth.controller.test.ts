@@ -9,6 +9,7 @@ import { RefreshTokenModel } from '../../src/models/refresh_token.model';
 jest.mock('../../src/models/user.model');
 jest.mock('../../src/models/refresh_token.model');
 jest.mock('../../src/utils/jwt.utils');
+jest.mock('../../src/services/user.service');
 
 describe('AuthController', () => {
   let mockRequest: Partial<Request>;
@@ -133,6 +134,8 @@ describe('AuthController', () => {
       id: 1,
       email: 'test@example.com',
       username: 'testuser',
+      first_name: 'John',
+      last_name: 'Doe',
       created_at: new Date(),
       updated_at: new Date(),
     };
@@ -206,7 +209,7 @@ describe('AuthController', () => {
   });
 
   describe('getMe', () => {
-    it('should return user profile when authenticated', async () => {
+    it('should return user profile with stats when authenticated', async () => {
       const mockUser = {
         id: 1,
         email: 'test@example.com',
@@ -215,16 +218,26 @@ describe('AuthController', () => {
         updated_at: new Date(),
       };
 
+      const mockStats = {
+        eventsCreated: 2,
+        participations: 3,
+        giftsOffered: 1,
+      };
+
       mockRequest = { ...mockRequest, user: { id: 1, email: 'test@example.com' } } as any;
       (UserModel.findById as jest.Mock).mockResolvedValue(mockUser);
+
+      const { getUserStats } = require('../../src/services/user.service');
+      (getUserStats as jest.Mock).mockResolvedValue(mockStats);
 
       await AuthController.getMe(mockRequest as Request, mockResponse as Response);
 
       expect(UserModel.findById).toHaveBeenCalledWith(1);
+      expect(getUserStats).toHaveBeenCalledWith(1);
       expect(statusMock).toHaveBeenCalledWith(200);
       expect(jsonMock).toHaveBeenCalledWith({
         success: true,
-        data: { user: mockUser },
+        data: { user: { ...mockUser, stats: mockStats } },
       });
     });
 
