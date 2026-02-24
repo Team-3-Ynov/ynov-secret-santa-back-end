@@ -1,4 +1,16 @@
 import 'dotenv/config';
+
+import * as Sentry from '@sentry/node';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  enabled: true,
+  environment: 'production',
+  tracesSampleRate: 1,
+  sampleRate: 1,
+  debug: false,
+});
+
 import app from './app';
 
 const PORT = process.env.PORT || 3000;

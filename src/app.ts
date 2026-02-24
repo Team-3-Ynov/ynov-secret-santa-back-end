@@ -9,6 +9,7 @@ import { pool } from './config/database';
 import authRoutes from './routes/auth.routes';
 import eventRoutes from './routes/event.routes';
 import userRoutes from './routes/user.routes';
+import * as Sentry from '@sentry/node';
 
 const app: Express = express();
 
@@ -79,6 +80,12 @@ app.get('/health', async (_, res) => {
   }
 });
 
+// Route de test Sentry (temporaire)
+app.get('/sentry-test', async (_req, res) => {
+  const ok = await Sentry.flush(5000);
+  throw new Error("erreur test");
+});
+
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
@@ -91,14 +98,18 @@ app.use((req, res) => {
   });
 });
 
+Sentry.setupExpressErrorHandler(app);
+
 // Gestionnaire d'erreurs global
 app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('❌ Erreur non gérée:', err);
+  // Capture Sentry
+  Sentry.captureException(err);
   res.status(500).json({
     success: false,
     message: process.env.NODE_ENV === 'production'
-      ? 'Erreur serveur interne'
-      : err.message,
+        ? 'Erreur serveur interne'
+        : err.message,
   });
 });
 
