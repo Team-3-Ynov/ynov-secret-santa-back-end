@@ -80,12 +80,6 @@ app.get('/health', async (_, res) => {
   }
 });
 
-// Route de test Sentry (temporaire)
-app.get('/sentry-test', async (_req, res) => {
-  await Sentry.flush(5000);
-  throw new Error("erreur test");
-});
-
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
