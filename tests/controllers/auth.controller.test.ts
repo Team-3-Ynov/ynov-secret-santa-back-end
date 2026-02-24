@@ -134,6 +134,8 @@ describe('AuthController', () => {
       id: 1,
       email: 'test@example.com',
       username: 'testuser',
+      first_name: 'John',
+      last_name: 'Doe',
       created_at: new Date(),
       updated_at: new Date(),
     };

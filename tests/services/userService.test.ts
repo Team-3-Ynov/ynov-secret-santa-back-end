@@ -48,10 +48,13 @@ describe('UserService', () => {
 
     describe('getUserStats', () => {
         it('should return user statistics', async () => {
-            mockPool.query
-                .mockResolvedValueOnce({ rows: [{ count: '5' }] })
-                .mockResolvedValueOnce({ rows: [{ count: '3' }] })
-                .mockResolvedValueOnce({ rows: [{ count: '2' }] });
+            mockPool.query.mockResolvedValueOnce({
+                rows: [{
+                    events_created: '5',
+                    participations: '3',
+                    gifts_offered: '2'
+                }]
+            });
 
             const result = await getUserStats(1);
 

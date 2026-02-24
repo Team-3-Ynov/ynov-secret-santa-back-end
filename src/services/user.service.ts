@@ -15,7 +15,6 @@ export interface UserStats {
   participations: number;
   giftsOffered: number;
 }
-}
 
 export interface UpdateProfileResult {
   success: boolean;
@@ -74,7 +73,6 @@ export const getUserStats = async (userId: number): Promise<UserStats> => {
     giftsOffered: parseInt((row as any).gifts_offered || '0', 10),
   };
 };
-/**
 /**
  * Met à jour le profil d'un utilisateur (email et/ou username)
  */
