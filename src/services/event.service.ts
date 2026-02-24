@@ -2,13 +2,14 @@ import { pool } from '../config/database';
 import { EventRecord, NormalizedEventInput, UpdateEventInput } from '../models/event.model';
 import { InvitationRecord } from '../models/invitation.model';
 import { AssignmentRecord } from '../models/assignment.model';
+import { Exclusion } from '../models/exclusion.model';
 import { randomUUID } from 'crypto';
 
-export const createEvent = async (payload: NormalizedEventInput): Promise<EventRecord> => {
+export const createEvent = async (payload: NormalizedEventInput, clientPool: typeof pool = pool): Promise<EventRecord> => {
   const id = randomUUID();
   const createdAt = new Date();
 
-  const result = await pool.query<EventRecord>(
+  const result = await clientPool.query<EventRecord>(
     `INSERT INTO events (id, title, description, event_date, budget, owner_id, created_at)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
      RETURNING id, title, description, event_date AS "eventDate", budget, owner_id AS "ownerId", created_at AS "createdAt"`,
@@ -26,11 +27,11 @@ export const createEvent = async (payload: NormalizedEventInput): Promise<EventR
   return result.rows[0];
 };
 
-export const createInvitation = async (eventId: string, email: string): Promise<InvitationRecord> => {
+export const createInvitation = async (eventId: string, email: string, clientPool: typeof pool = pool): Promise<InvitationRecord> => {
   const id = randomUUID();
 
   // Vérifier si l'invitation existe déjà
-  const existing = await pool.query(
+  const existing = await clientPool.query(
     'SELECT * FROM invitations WHERE event_id = $1 AND email = $2',
     [eventId, email]
   );
@@ -39,7 +40,7 @@ export const createInvitation = async (eventId: string, email: string): Promise<
     return existing.rows[0];
   }
 
-  const result = await pool.query<InvitationRecord>(
+  const result = await clientPool.query<InvitationRecord>(
     `INSERT INTO invitations (id, event_id, email, status)
      VALUES ($1, $2, $3, 'pending')
      RETURNING *`,
@@ -49,9 +50,9 @@ export const createInvitation = async (eventId: string, email: string): Promise<
   return result.rows[0];
 };
 
-export const joinEvent = async (eventId: string, userId: number, email: string): Promise<{ success: boolean; message: string }> => {
+export const joinEvent = async (eventId: string, userId: number, email: string, clientPool: typeof pool = pool): Promise<{ success: boolean; message: string }> => {
   // Vérifier si une invitation existe pour cet email
-  const invitationResult = await pool.query<InvitationRecord>(
+  const invitationResult = await clientPool.query<InvitationRecord>(
     'SELECT * FROM invitations WHERE event_id = $1 AND email = $2',
     [eventId, email]
   );
@@ -72,7 +73,7 @@ export const joinEvent = async (eventId: string, userId: number, email: string):
   }
 
   // Mettre à jour l'invitation
-  await pool.query(
+  await clientPool.query(
     `UPDATE invitations 
      SET status = 'accepted', user_id = $1, updated_at = NOW() 
      WHERE id = $2`,
@@ -82,16 +83,16 @@ export const joinEvent = async (eventId: string, userId: number, email: string):
   return { success: true, message: 'Vous avez rejoint l\'événement avec succès !' };
 };
 
-export const findEventById = async (id: string): Promise<EventRecord | null> => {
-  const result = await pool.query<EventRecord>(
+export const findEventById = async (id: string, clientPool: typeof pool = pool): Promise<EventRecord | null> => {
+  const result = await clientPool.query<EventRecord>(
     'SELECT id, title, description, event_date AS "eventDate", budget, owner_id AS "ownerId", created_at AS "createdAt" FROM events WHERE id = $1',
     [id],
   );
   return result.rows[0] || null;
 };
 
-export const deleteEvent = async (id: string): Promise<boolean> => {
-  const client = await pool.connect();
+export const deleteEvent = async (id: string, clientPool: typeof pool = pool): Promise<boolean> => {
+  const client = await clientPool.connect();
   try {
     await client.query('BEGIN');
 
@@ -114,14 +115,14 @@ export const deleteEvent = async (id: string): Promise<boolean> => {
   }
 };
 
-export const updateEvent = async (id: string, payload: Partial<UpdateEventInput>): Promise<EventRecord | null> => {
+export const updateEvent = async (id: string, payload: Partial<UpdateEventInput>, clientPool: typeof pool = pool): Promise<EventRecord | null> => {
   const setClauses = Object.keys(payload).map((key, index) => {
     const dbKey = key === 'eventDate' ? 'event_date' : key;
     return `${dbKey} = $${index + 2}`;
   });
 
   if (setClauses.length === 0) {
-    return findEventById(id);
+    return findEventById(id, clientPool);
   }
 
   const query = `
@@ -133,7 +134,7 @@ export const updateEvent = async (id: string, payload: Partial<UpdateEventInput>
 
   const values = [id, ...Object.values(payload)];
 
-  const result = await pool.query<EventRecord>(query, values);
+  const result = await clientPool.query<EventRecord>(query, values);
   return result.rows[0] || null;
 };
 
@@ -147,8 +148,8 @@ function shuffle<T>(array: T[]): T[] {
   return arr;
 }
 
-export const performDraw = async (eventId: string): Promise<AssignmentRecord[]> => {
-  const client = await pool.connect();
+export const performDraw = async (eventId: string, clientPool: typeof pool = pool): Promise<AssignmentRecord[]> => {
+  const client = await clientPool.connect(); // Use the passed pool or default
   try {
     await client.query('BEGIN');
 
@@ -157,7 +158,6 @@ export const performDraw = async (eventId: string): Promise<AssignmentRecord[]> 
       `SELECT user_id FROM invitations WHERE event_id = $1 AND status = 'accepted' AND user_id IS NOT NULL`,
       [eventId]
     );
-
     const participants = participantsResult.rows.map(r => r.user_id);
 
     if (participants.length < 2) {
@@ -170,19 +170,28 @@ export const performDraw = async (eventId: string): Promise<AssignmentRecord[]> 
       throw new Error('Un tirage a déjà été effectué pour cet événement.');
     }
 
-    // 3. Effectuer le tirage (Derangement simple : A->B, B->C, C->A)
-    const shuffled = shuffle(participants);
-    const assignments: { giver: number; receiver: number }[] = [];
-
-    for (let i = 0; i < shuffled.length; i++) {
-      const giver = shuffled[i];
-      const receiver = shuffled[(i + 1) % shuffled.length]; // Le dernier donne au premier
-      assignments.push({ giver, receiver });
+    // 3. Récupérer les exclusions
+    const exclusionsResult = await client.query<{ giver_id: number; receiver_id: number }>(
+      'SELECT giver_id, receiver_id FROM event_exclusions WHERE event_id = $1',
+      [eventId]
+    );
+    const exclusions = new Map<number, number[]>();
+    for (const ex of exclusionsResult.rows) {
+      if (!exclusions.has(ex.giver_id)) {
+        exclusions.set(ex.giver_id, []);
+      }
+      exclusions.get(ex.giver_id)!.push(ex.receiver_id);
     }
 
-    // 4. Sauvegarder les assignations
-    const insertedAssignments: AssignmentRecord[] = [];
+    // 4. Tenter de trouver une assignation valide avec un algorithme de backtracking
+    const assignments = findValidAssignment(participants, exclusions);
 
+    if (!assignments) {
+      throw new Error('Impossible de trouver une assignation valide avec les exclusions actuelles. Trop de contraintes.');
+    }
+
+    // 5. Sauvegarder les assignations
+    const insertedAssignments: AssignmentRecord[] = [];
     for (const assignment of assignments) {
       const id = randomUUID();
       const res = await client.query<AssignmentRecord>(
@@ -205,16 +214,112 @@ export const performDraw = async (eventId: string): Promise<AssignmentRecord[]> 
   }
 };
 
-export const getAssignment = async (eventId: string, userId: number): Promise<AssignmentRecord | null> => {
-  const result = await pool.query<AssignmentRecord>(
+function findValidAssignment(
+  participants: number[],
+  exclusions: Map<number, number[]>
+): { giver: number; receiver: number }[] | null {
+  // We model the problem as a bipartite graph between givers (left side)
+  // and receivers (right side), both indexed over the participants array.
+  // We then compute a maximum matching; if it covers all givers, we build
+  // the corresponding assignments.
+
+  const n = participants.length;
+
+  if (n === 0) {
+    return [];
+  }
+
+  // Map receiver id -> index on the right side
+  const receiverIndex = new Map<number, number>();
+  for (let i = 0; i < n; i++) {
+    receiverIndex.set(participants[i], i);
+  }
+
+  // Build adjacency list: for each giver index, list of allowed receiver indices
+  const adjacency: number[][] = new Array(n);
+  for (let gi = 0; gi < n; gi++) {
+    const giverId = participants[gi];
+    const giverExclusions = new Set(exclusions.get(giverId) || []);
+    const neighbors: number[] = [];
+
+    for (let ri = 0; ri < n; ri++) {
+      const receiverId = participants[ri];
+
+      // Disallow self-giving and excluded receivers
+      if (giverId === receiverId) {
+        continue;
+      }
+      if (giverExclusions.has(receiverId)) {
+        continue;
+      }
+
+      neighbors.push(ri);
+    }
+
+    adjacency[gi] = neighbors;
+  }
+
+  // matchToReceiver[ri] = giver index matched to receiver index ri, or -1 if free
+  const matchToReceiver: number[] = new Array(n).fill(-1);
+
+  function tryMatch(giverIndex: number, seen: boolean[]): boolean {
+    const neighbors = adjacency[giverIndex];
+
+    for (let k = 0; k < neighbors.length; k++) {
+      const receiverIdx = neighbors[k];
+
+      if (seen[receiverIdx]) {
+        continue;
+      }
+      seen[receiverIdx] = true;
+
+      const currentGiver = matchToReceiver[receiverIdx];
+      if (currentGiver === -1 || tryMatch(currentGiver, seen)) {
+        matchToReceiver[receiverIdx] = giverIndex;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Run bipartite matching: each giver tries to find an augmenting path.
+  for (let gi = 0; gi < n; gi++) {
+    const seen: boolean[] = new Array(n).fill(false);
+    if (!tryMatch(gi, seen)) {
+      // No perfect matching exists under the constraints
+      return null;
+    }
+  }
+
+  // Build assignments from the matching
+  const assignments: { giver: number; receiver: number }[] = [];
+  for (let ri = 0; ri < n; ri++) {
+    const gi = matchToReceiver[ri];
+    if (gi === -1) {
+      // Should not happen if we confirmed a perfect matching above,
+      // but keep a safety check.
+      return null;
+    }
+    const giverId = participants[gi];
+    const receiverId = participants[ri];
+    assignments.push({ giver: giverId, receiver: receiverId });
+  }
+
+  return assignments;
+}
+
+
+export const getAssignment = async (eventId: string, userId: number, clientPool: typeof pool = pool): Promise<AssignmentRecord | null> => {
+  const result = await clientPool.query<AssignmentRecord>(
     'SELECT * FROM assignments WHERE event_id = $1 AND giver_id = $2',
     [eventId, userId]
   );
   return result.rows[0] || null;
 };
 
-export const getEventsByUserId = async (userId: number): Promise<EventRecord[]> => {
-  const result = await pool.query<EventRecord>(
+export const getEventsByUserId = async (userId: number, clientPool: typeof pool = pool): Promise<EventRecord[]> => {
+  const result = await clientPool.query<EventRecord>(
     `SELECT DISTINCT e.id, e.title, e.description, e.event_date AS "eventDate", e.budget, e.owner_id AS "ownerId", e.created_at AS "createdAt"
      FROM events e
      LEFT JOIN invitations i ON e.id = i.event_id
@@ -232,8 +337,8 @@ export interface Participant {
   email: string;
 }
 
-export const getEventParticipants = async (eventId: string): Promise<Participant[]> => {
-  const result = await pool.query<Participant>(
+export const getEventParticipants = async (eventId: string, clientPool: typeof pool = pool): Promise<Participant[]> => {
+  const result = await clientPool.query<Participant>(
     `SELECT u.id, u.username, u.email
      FROM invitations i
      JOIN users u ON i.user_id = u.id
@@ -255,8 +360,8 @@ export interface InvitationWithUser {
   updated_at: Date;
 }
 
-export const getEventInvitations = async (eventId: string): Promise<InvitationWithUser[]> => {
-  const result = await pool.query<InvitationWithUser>(
+export const getEventInvitations = async (eventId: string, clientPool: typeof pool = pool): Promise<InvitationWithUser[]> => {
+  const result = await clientPool.query<InvitationWithUser>(
     `SELECT i.id, i.event_id, i.email, i.status, i.user_id, u.username, i.created_at, i.updated_at
      FROM invitations i
      LEFT JOIN users u ON i.user_id = u.id
@@ -267,19 +372,71 @@ export const getEventInvitations = async (eventId: string): Promise<InvitationWi
   return result.rows;
 };
 
-export const findInvitationById = async (invitationId: string): Promise<InvitationRecord | null> => {
-  const result = await pool.query<InvitationRecord>(
+export const findInvitationById = async (invitationId: string, clientPool: typeof pool = pool): Promise<InvitationRecord | null> => {
+  const result = await clientPool.query<InvitationRecord>(
     'SELECT * FROM invitations WHERE id = $1',
     [invitationId]
   );
   return result.rows[0] || null;
 };
 
-export const deleteInvitation = async (invitationId: string): Promise<boolean> => {
-  const result = await pool.query(
+export const deleteInvitation = async (invitationId: string, clientPool: typeof pool = pool): Promise<boolean> => {
+  const result = await clientPool.query(
     'DELETE FROM invitations WHERE id = $1',
     [invitationId]
   );
   return (result.rowCount ?? 0) > 0;
 };
 
+export const addExclusion = async (eventId: string, giverId: number, receiverId: number, clientPool: typeof pool = pool): Promise<Exclusion> => {
+  if (giverId === receiverId) {
+    throw new Error('Un utilisateur ne peut pas s\'exclure lui-même.');
+  }
+
+  // Vérifier si le donneur et le receveur sont bien des participants acceptés de l'événement
+  const participantsCheck = await clientPool.query<{ user_id: number }>(
+    "SELECT user_id FROM invitations WHERE event_id = $1 AND user_id IN ($2, $3) AND status = 'accepted'",
+    [eventId, giverId, receiverId]
+  );
+
+  const foundUserIds = participantsCheck.rows.map(r => r.user_id);
+  if (!foundUserIds.includes(giverId)) {
+    throw new Error('Le donneur n\'est pas un participant accepté de cet événement.');
+  }
+  if (!foundUserIds.includes(receiverId)) {
+    throw new Error('Le receveur n\'est pas un participant accepté de cet événement.');
+  }
+
+  try {
+    const result = await clientPool.query<Exclusion>(
+      `INSERT INTO event_exclusions (event_id, giver_id, receiver_id)
+       VALUES ($1, $2, $3)
+       RETURNING *`,
+      [eventId, giverId, receiverId]
+    );
+
+    return result.rows[0];
+  } catch (error: any) {
+    if (error && error.code === '23505') {
+      // Contrainte d'unicité violée : cette exclusion existe déjà pour cet événement
+      throw new Error('Cette exclusion existe déjà pour cet événement.');
+    }
+    throw error;
+  }
+};
+
+export const getEventExclusions = async (eventId: string, clientPool: typeof pool = pool): Promise<Exclusion[]> => {
+  const result = await clientPool.query<Exclusion>(
+    'SELECT * FROM event_exclusions WHERE event_id = $1',
+    [eventId]
+  );
+  return result.rows;
+};
+
+export const deleteExclusion = async (eventId: string, exclusionId: number, clientPool: typeof pool = pool): Promise<boolean> => {
+  const result = await clientPool.query(
+    'DELETE FROM event_exclusions WHERE id = $1 AND event_id = $2',
+    [exclusionId, eventId]
+  );
+  return (result.rowCount ?? 0) > 0;
+};

@@ -69,6 +69,9 @@ DB_PASSWORD=postgres
 # Configuration JWT
 JWT_SECRET=your-super-secret-key-change-this-in-production
 JWT_EXPIRES_IN=7d
+
+# Mapping postgres port on docker
+POSTGRES_PORT_MAPPING=5432:5432
 ```
 
 ### 4. Démarrer les services de développement (PostgreSQL + MailHog)

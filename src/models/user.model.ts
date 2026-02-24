@@ -1,6 +1,6 @@
 import { pool } from '../config/database';
 import bcrypt from 'bcrypt';
-import { User, CreateUserDTO, UserWithoutPassword } from '../types/user.types';
+import { User, CreateUserDTO, UserWithoutPassword, UpdateUserDTO } from '../types/user.types';
 
 const SALT_ROUNDS = 10;
 
@@ -14,11 +14,11 @@ export const UserModel = {
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
 
     const query = `
-      INSERT INTO users (email, password, username)
-      VALUES ($1, $2, $3)
-      RETURNING id, email, username, created_at, updated_at
+      INSERT INTO users (email, password, username, first_name, last_name)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING id, email, username, first_name, last_name, created_at, updated_at
     `;
-    const values = [userData.email, hashedPassword, userData.username];
+    const values = [userData.email, hashedPassword, userData.username, userData.first_name ?? null, userData.last_name ?? null];
     const result = await pool.query(query, values);
     return result.rows[0];
   },
@@ -49,7 +49,7 @@ export const UserModel = {
    * Trouve un utilisateur par son ID
    */
   async findById(id: number): Promise<UserWithoutPassword | null> {
-    const query = 'SELECT id, email, username, created_at, updated_at FROM users WHERE id = $1';
+    const query = 'SELECT id, email, username, first_name, last_name, created_at, updated_at FROM users WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows[0] || null;
   },
@@ -79,6 +79,100 @@ export const UserModel = {
     const query = 'SELECT 1 FROM users WHERE username = $1';
     const result = await pool.query(query, [username]);
     return result.rows.length > 0;
+  },
+
+  /**
+   * Vérifie si un email existe déjà pour un autre utilisateur
+   */
+  async emailExistsForOtherUser(email: string, excludeUserId: number): Promise<boolean> {
+    const query = 'SELECT 1 FROM users WHERE email = $1 AND id != $2';
+    const result = await pool.query(query, [email, excludeUserId]);
+    return result.rows.length > 0;
+  },
+
+  /**
+   * Vérifie si un username existe déjà pour un autre utilisateur
+   */
+  async usernameExistsForOtherUser(username: string, excludeUserId: number): Promise<boolean> {
+    const query = 'SELECT 1 FROM users WHERE username = $1 AND id != $2';
+    const result = await pool.query(query, [username, excludeUserId]);
+    return result.rows.length > 0;
+  },
+
+  /**
+   * Met à jour le profil d'un utilisateur (email et/ou username)
+   */
+  async update(id: number, data: UpdateUserDTO): Promise<UserWithoutPassword | null> {
+    const fields: string[] = [];
+    const values: (string | number | null)[] = [];
+    let paramIndex = 1;
+
+    if (data.email !== undefined) {
+      fields.push(`email = $${paramIndex++}`);
+      values.push(data.email);
+    }
+
+    if (data.username !== undefined) {
+      fields.push(`username = $${paramIndex++}`);
+      values.push(data.username);
+    }
+
+    if (data.first_name !== undefined) {
+      fields.push(`first_name = $${paramIndex++}`);
+      values.push(data.first_name || null);
+    }
+
+    if (data.last_name !== undefined) {
+      fields.push(`last_name = $${paramIndex++}`);
+      values.push(data.last_name || null);
+    }
+
+    if (fields.length === 0) {
+      return this.findById(id);
+    }
+
+    values.push(id);
+
+    const query = `
+      UPDATE users 
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, email, username, first_name, last_name, created_at, updated_at
+    `;
+
+    const result = await pool.query(query, values);
+    return result.rows[0] || null;
+  },
+
+  /**
+   * Met à jour le mot de passe d'un utilisateur
+   */
+  async updatePassword(id: number, newPassword: string): Promise<boolean> {
+    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+
+    const query = `
+      UPDATE users 
+      SET password = $1
+      WHERE id = $2
+    `;
+
+    const result = await pool.query(query, [hashedPassword, id]);
+    return result.rowCount !== null && result.rowCount > 0;
+  },
+
+  /**
+   * Vérifie le mot de passe actuel d'un utilisateur
+   */
+  async verifyPassword(id: number, password: string): Promise<boolean> {
+    const query = 'SELECT password FROM users WHERE id = $1';
+    const result = await pool.query(query, [id]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return false;
+    }
+
+    return bcrypt.compare(password, user.password);
   },
 };
 
