@@ -23,6 +23,8 @@
   "license": "ISC",
   "packageManager": "pnpm@10.25.0",
   "dependencies": {
+    "@sentry/node": "^10.38.0",
+    "@sentry/tracing": "^7.120.4",
     "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

@@ -1,4 +1,16 @@
 import 'dotenv/config';
+
+import * as Sentry from '@sentry/node';
+
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  enabled: true,
+  environment: 'production',
+  tracesSampleRate: 1,
+  sampleRate: 1,
+  debug: false,
+});
+
 import http from 'node:http';
 import app from './app';
 
