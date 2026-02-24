@@ -64,6 +64,38 @@ describe('UserService', () => {
                 giftsOffered: 2,
             });
         });
+
+        it('should handle user with zero statistics', async () => {
+            mockPool.query.mockResolvedValueOnce({
+                rows: [{
+                    events_created: '0',
+                    participations: '0',
+                    gifts_offered: '0'
+                }]
+            });
+
+            const result = await getUserStats(1);
+
+            expect(result).toEqual({
+                eventsCreated: 0,
+                participations: 0,
+                giftsOffered: 0,
+            });
+        });
+
+        it('should return zeros when no statistics are found', async () => {
+            mockPool.query.mockResolvedValueOnce({
+                rows: []
+            });
+
+            const result = await getUserStats(1);
+
+            expect(result).toEqual({
+                eventsCreated: 0,
+                participations: 0,
+                giftsOffered: 0,
+            });
+        });
     });
 
     describe('updateUserProfile', () => {
