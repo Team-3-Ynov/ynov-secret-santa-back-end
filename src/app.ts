@@ -9,6 +9,7 @@ import { pool } from './config/database';
 import authRoutes from './routes/auth.routes';
 import eventRoutes from './routes/event.routes';
 import userRoutes from './routes/user.routes';
+import notificationRoutes from './routes/notification.routes';
 
 const app: Express = express();
 
@@ -82,6 +83,7 @@ app.get('/health', async (_, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Route 404 - doit être après toutes les autres routes
 app.use((req, res) => {

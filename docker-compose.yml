@@ -1,7 +1,7 @@
 # ═══════════════════════════════════════════════════════════════
 # Docker Compose
 # ═══════════════════════════════════════════════════════════════
-# 
+#
 # Using profiles to handle different environments
 # docker compose -f docker-compose.yml --profile all up   # all services
 # docker compose -f docker-compose.yml --profile infra up # infra services
@@ -57,6 +57,8 @@ services:
       dockerfile: docker/Dockerfile
     container_name: secret_santa_backend
     profiles: [all]
+    ports:
+      - "3001:3000"
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=3000
@@ -116,7 +118,7 @@ services:
       start_period: 10s
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT_MAPPING:-5432}"
+      - "${POSTGRES_PORT_MAPPING:-5432:5432}"
     networks:
       - backend-database
 

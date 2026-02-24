@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import { addExclusion, createEvent, findEventById, updateEvent, deleteEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, getEventExclusions, deleteExclusion } from '../services/event.service';
 import { validateEventInput, updateEventSchema } from '../models/event.model';
 import { invitationSchema } from '../models/invitation.model';
-import { sendInvitationEmail } from '../services/email.service';
+import { sendInvitationEmail, sendDrawResultEmail } from '../services/email.service';
+import { createNotification } from '../services/notification.service';
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
@@ -171,7 +172,24 @@ export const drawEventHandler = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Seul l\'organisateur peut lancer le tirage au sort.' });
     }
 
-    const assignments = await performDraw(eventId);
+    const { assignments, notifications } = await performDraw(eventId);
+
+    // Envoyer les notifications en BDD ET les emails en parallèle
+    await Promise.allSettled(
+      notifications.flatMap(({ giverId, giverEmail, giverUsername, receiverUsername, eventTitle }) => [
+        // Notification en base (cloche)
+        createNotification({
+          userId: giverId,
+          type: 'draw_result',
+          title: `🎅 Résultat du tirage - ${eventTitle}`,
+          message: `Vous avez été désigné(e) pour offrir un cadeau à ${receiverUsername} !`,
+          metadata: { eventId, receiverUsername },
+        }),
+        // Email de notification
+        sendDrawResultEmail(giverEmail, giverUsername, receiverUsername, eventTitle),
+      ])
+    );
+
     res.status(200).json({ success: true, message: 'Tirage effectué avec succès !', count: assignments.length });
 
   } catch (error: any) {

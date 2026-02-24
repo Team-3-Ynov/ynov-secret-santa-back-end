@@ -148,29 +148,55 @@ function shuffle<T>(array: T[]): T[] {
   return arr;
 }
 
-export const performDraw = async (eventId: string, clientPool: typeof pool = pool): Promise<AssignmentRecord[]> => {
+export interface DrawNotification {
+  giverId: number;
+  giverEmail: string;
+  giverUsername: string;
+  receiverUsername: string;
+  eventTitle: string;
+}
+
+export interface DrawResult {
+  assignments: AssignmentRecord[];
+  notifications: DrawNotification[];
+}
+
+export const performDraw = async (eventId: string, clientPool: typeof pool = pool): Promise<DrawResult> => {
   const client = await clientPool.connect(); // Use the passed pool or default
   try {
     await client.query('BEGIN');
 
-    // 1. Récupérer tous les participants acceptés
-    const participantsResult = await client.query<{ user_id: number }>(
-      `SELECT user_id FROM invitations WHERE event_id = $1 AND status = 'accepted' AND user_id IS NOT NULL`,
+    // 1. Récupérer le titre de l'événement
+    const eventResult = await client.query<{ title: string }>(
+      'SELECT title FROM events WHERE id = $1',
+      [eventId]
+    );
+    const eventTitle = eventResult.rows[0]?.title ?? 'Secret Santa';
+
+    // 2. Récupérer tous les participants acceptés avec leurs infos utilisateur
+    const participantsResult = await client.query<{ user_id: number; email: string; username: string }>(
+      `SELECT i.user_id, u.email, u.username
+       FROM invitations i
+       JOIN users u ON i.user_id = u.id
+       WHERE i.event_id = $1 AND i.status = 'accepted' AND i.user_id IS NOT NULL`,
       [eventId]
     );
     const participants = participantsResult.rows.map(r => r.user_id);
+    const userInfoMap = new Map(
+      participantsResult.rows.map(r => [r.user_id, { email: r.email, username: r.username }])
+    );
 
     if (participants.length < 2) {
       throw new Error('Il faut au moins 2 participants pour effectuer un tirage.');
     }
 
-    // 2. Vérifier si un tirage existe déjà
+    // 3. Vérifier si un tirage existe déjà
     const existingDraw = await client.query('SELECT id FROM assignments WHERE event_id = $1 LIMIT 1', [eventId]);
     if (existingDraw.rows.length > 0) {
       throw new Error('Un tirage a déjà été effectué pour cet événement.');
     }
 
-    // 3. Récupérer les exclusions
+    // 4. Récupérer les exclusions
     const exclusionsResult = await client.query<{ giver_id: number; receiver_id: number }>(
       'SELECT giver_id, receiver_id FROM event_exclusions WHERE event_id = $1',
       [eventId]
@@ -183,15 +209,17 @@ export const performDraw = async (eventId: string, clientPool: typeof pool = poo
       exclusions.get(ex.giver_id)!.push(ex.receiver_id);
     }
 
-    // 4. Tenter de trouver une assignation valide avec un algorithme de backtracking
+    // 5. Tenter de trouver une assignation valide avec un algorithme de backtracking
     const assignments = findValidAssignment(participants, exclusions);
 
     if (!assignments) {
       throw new Error('Impossible de trouver une assignation valide avec les exclusions actuelles. Trop de contraintes.');
     }
 
-    // 5. Sauvegarder les assignations
+    // 6. Sauvegarder les assignations et préparer les données de notification
     const insertedAssignments: AssignmentRecord[] = [];
+    const notifications: DrawNotification[] = [];
+
     for (const assignment of assignments) {
       const id = randomUUID();
       const res = await client.query<AssignmentRecord>(
@@ -201,10 +229,23 @@ export const performDraw = async (eventId: string, clientPool: typeof pool = poo
         [id, eventId, assignment.giver, assignment.receiver]
       );
       insertedAssignments.push(res.rows[0]);
+
+      // Préparer les données pour les notifications / emails
+      const giverInfo = userInfoMap.get(assignment.giver);
+      const receiverInfo = userInfoMap.get(assignment.receiver);
+      if (giverInfo && receiverInfo) {
+        notifications.push({
+          giverId: assignment.giver,
+          giverEmail: giverInfo.email,
+          giverUsername: giverInfo.username,
+          receiverUsername: receiverInfo.username,
+          eventTitle,
+        });
+      }
     }
 
     await client.query('COMMIT');
-    return insertedAssignments;
+    return { assignments: insertedAssignments, notifications };
 
   } catch (error) {
     await client.query('ROLLBACK');
