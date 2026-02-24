@@ -82,7 +82,7 @@ app.get('/health', async (_, res) => {
 
 // Route de test Sentry (temporaire)
 app.get('/sentry-test', async (_req, res) => {
-  const ok = await Sentry.flush(5000);
+  await Sentry.flush(5000);
   throw new Error("erreur test");
 });
 
