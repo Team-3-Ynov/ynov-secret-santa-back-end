@@ -15,8 +15,8 @@ const transporter = nodemailer.createTransport({
 
 export const sendInvitationEmail = async (to: string, eventTitle: string, inviteLink: string) => {
     // Si on est en dev sans credentials SMTP configurés, on simule l'envoi
-    if (!isDev && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
-        console.warn('⚠️ SMTP credentials not found. Email not sent.');
+    if (isDev && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
+        console.warn('⚠️ [DEV MODE] SMTP credentials not found. Email simulation used.');
         console.log(`[MOCK EMAIL] To: ${to}, Subject: Invitation Secret Santa, Link: ${inviteLink}`);
         return;
     }
@@ -61,8 +61,8 @@ export const sendDrawResultEmail = async (
     receiverUsername: string,
     eventTitle: string
 ) => {
-    if (!isDev && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
-        console.warn('⚠️ SMTP credentials not found. Email not sent.');
+    if (isDev && (!process.env.SMTP_USER || !process.env.SMTP_PASS)) {
+        console.warn('⚠️ [DEV MODE] SMTP credentials not found. Email simulation used.');
         console.log(`[MOCK EMAIL] Draw result - To: ${to}, Receiver: ${receiverUsername}`);
         return;
     }
