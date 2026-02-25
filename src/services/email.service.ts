@@ -38,11 +38,16 @@ export const sendInvitationEmail = async (to: string, eventTitle: string, invite
     try {
         const info = await transporter.sendMail(mailOptions);
         console.log('📧 Email envoyé: %s', info.messageId);
-    } catch (error) {
-        console.error('❌ Erreur lors de l\'envoi de l\'email:', error);
+    } catch (error: any) {
+        console.error('❌ Erreur lors de l\'envoi de l\'email:', error.message || error);
+
         // En développement, on log l'erreur mais on ne fait pas crasher la requête
         if (isDev) {
-            console.warn('⚠️ [DEV MODE] Email non envoyé - MailHog probablement non démarré');
+            if (error.code === 'ECONNREFUSED') {
+                console.warn('⚠️ [DEV MODE] Connection refused: MailHog is likely not running. Run `docker compose --profile infra up -d`');
+            } else {
+                console.warn('⚠️ [DEV MODE] Email non envoyé - See error above');
+            }
             console.log(`[MOCK EMAIL] To: ${to}, Subject: Invitation Secret Santa, Link: ${inviteLink}`);
             return; // On continue sans erreur en dev
         }
