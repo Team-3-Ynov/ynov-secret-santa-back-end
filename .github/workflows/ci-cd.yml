@@ -96,6 +96,21 @@ jobs:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
 
+      - name: 🔍 SonarQube Scan
+        if: always()
+        run: |
+          # Install SonarScanner
+          dotnet tool install --global dotnet-sonarscanner --version 6.2.0
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          
+          # Run SonarScanner
+          sonar-scanner \
+            -Dsonar.projectKey=ynov-secret-santa-back-end \
+            -Dsonar.sources=src \
+            -Dsonar.host.url=${{ secrets.SONARQUBE_URL }} \
+            -Dsonar.login=${{ secrets.SONARQUBE_TOKEN }} \
+            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
+
       - name: 📋 Test Summary
         if: always()
         run: |
