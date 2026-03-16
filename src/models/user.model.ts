@@ -1,6 +1,6 @@
-import { pool } from '../config/database';
-import bcrypt from 'bcrypt';
-import { User, CreateUserDTO, UserWithoutPassword, UpdateUserDTO } from '../types/user.types';
+import bcrypt from "bcrypt";
+import { pool } from "../config/database";
+import type { CreateUserDTO, UpdateUserDTO, User, UserWithoutPassword } from "../types/user.types";
 
 const SALT_ROUNDS = 10;
 
@@ -18,7 +18,13 @@ export const UserModel = {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING id, email, username, first_name, last_name, created_at, updated_at
     `;
-    const values = [userData.email, hashedPassword, userData.username, userData.first_name ?? null, userData.last_name ?? null];
+    const values = [
+      userData.email,
+      hashedPassword,
+      userData.username,
+      userData.first_name ?? null,
+      userData.last_name ?? null,
+    ];
     const result = await pool.query(query, values);
     return result.rows[0];
   },
@@ -27,7 +33,7 @@ export const UserModel = {
    * Vérifie les identifiants et retourne l'utilisateur (sans password)
    */
   async verifyCredentials(email: string, password: string): Promise<UserWithoutPassword | null> {
-    const query = 'SELECT * FROM users WHERE email = $1';
+    const query = "SELECT * FROM users WHERE email = $1";
     const result = await pool.query(query, [email]);
     const user: User | undefined = result.rows[0];
 
@@ -49,7 +55,8 @@ export const UserModel = {
    * Trouve un utilisateur par son ID
    */
   async findById(id: number): Promise<UserWithoutPassword | null> {
-    const query = 'SELECT id, email, username, first_name, last_name, created_at, updated_at FROM users WHERE id = $1';
+    const query =
+      "SELECT id, email, username, first_name, last_name, created_at, updated_at FROM users WHERE id = $1";
     const result = await pool.query(query, [id]);
     return result.rows[0] || null;
   },
@@ -58,7 +65,7 @@ export const UserModel = {
    * Vérifie si un email existe déjà
    */
   async emailExists(email: string): Promise<boolean> {
-    const query = 'SELECT 1 FROM users WHERE email = $1';
+    const query = "SELECT 1 FROM users WHERE email = $1";
     const result = await pool.query(query, [email]);
     return result.rows.length > 0;
   },
@@ -67,7 +74,7 @@ export const UserModel = {
    * Trouve un utilisateur par son Email (inclut le password pour vérification)
    */
   async findByEmail(email: string): Promise<User | null> {
-    const query = 'SELECT * FROM users WHERE email = $1';
+    const query = "SELECT * FROM users WHERE email = $1";
     const result = await pool.query(query, [email]);
     return result.rows[0] || null;
   },
@@ -76,7 +83,7 @@ export const UserModel = {
    * Vérifie si un username existe déjà
    */
   async usernameExists(username: string): Promise<boolean> {
-    const query = 'SELECT 1 FROM users WHERE username = $1';
+    const query = "SELECT 1 FROM users WHERE username = $1";
     const result = await pool.query(query, [username]);
     return result.rows.length > 0;
   },
@@ -85,7 +92,7 @@ export const UserModel = {
    * Vérifie si un email existe déjà pour un autre utilisateur
    */
   async emailExistsForOtherUser(email: string, excludeUserId: number): Promise<boolean> {
-    const query = 'SELECT 1 FROM users WHERE email = $1 AND id != $2';
+    const query = "SELECT 1 FROM users WHERE email = $1 AND id != $2";
     const result = await pool.query(query, [email, excludeUserId]);
     return result.rows.length > 0;
   },
@@ -94,7 +101,7 @@ export const UserModel = {
    * Vérifie si un username existe déjà pour un autre utilisateur
    */
   async usernameExistsForOtherUser(username: string, excludeUserId: number): Promise<boolean> {
-    const query = 'SELECT 1 FROM users WHERE username = $1 AND id != $2';
+    const query = "SELECT 1 FROM users WHERE username = $1 AND id != $2";
     const result = await pool.query(query, [username, excludeUserId]);
     return result.rows.length > 0;
   },
@@ -135,7 +142,7 @@ export const UserModel = {
 
     const query = `
       UPDATE users 
-      SET ${fields.join(', ')}
+      SET ${fields.join(", ")}
       WHERE id = $${paramIndex}
       RETURNING id, email, username, first_name, last_name, created_at, updated_at
     `;
@@ -164,7 +171,7 @@ export const UserModel = {
    * Vérifie le mot de passe actuel d'un utilisateur
    */
   async verifyPassword(id: number, password: string): Promise<boolean> {
-    const query = 'SELECT password FROM users WHERE id = $1';
+    const query = "SELECT password FROM users WHERE id = $1";
     const result = await pool.query(query, [id]);
     const user = result.rows[0];
 
@@ -175,4 +182,3 @@ export const UserModel = {
     return bcrypt.compare(password, user.password);
   },
 };
-

@@ -1,24 +1,20 @@
-import 'dotenv/config';
-import { sendInvitationEmail } from '../services/email.service';
+import "dotenv/config";
+import { sendInvitationEmail } from "../services/email.service";
 
 async function main() {
-    const targetEmail = 'test.test@yopmail.com';
-    console.log(`🚀 Tentative d'envoi d'email à ${targetEmail}...`);
+  const targetEmail = "test.test@yopmail.com";
+  console.log(`🚀 Tentative d'envoi d'email à ${targetEmail}...`);
 
-    try {
-        // URL factice pour le test
-        const testLink = 'http://localhost:3000/events/test-id/join';
+  try {
+    // URL factice pour le test
+    const testLink = "http://localhost:3000/events/test-id/join";
 
-        await sendInvitationEmail(
-            targetEmail,
-            'Test Manuelle Secret Santa',
-            testLink
-        );
+    await sendInvitationEmail(targetEmail, "Test Manuelle Secret Santa", testLink);
 
-        console.log('✅ Script terminé sans erreur (Vérifiez si l\'email a été envoyé ou loggé).');
-    } catch (error) {
-        console.error('❌ Echec lors de l\'envoi:', error);
-    }
+    console.log("✅ Script terminé sans erreur (Vérifiez si l'email a été envoyé ou loggé).");
+  } catch (error) {
+    console.error("❌ Echec lors de l'envoi:", error);
+  }
 }
 
 main();

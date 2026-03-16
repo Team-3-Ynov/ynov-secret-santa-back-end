@@ -6,6 +6,23 @@
 - [Event Domain](#event-domain) - events, invitations, exclusions, assignments
 - [Notification Domain](#notification-domain) - notifications, unread counters
 
+## Activation Matrix
+
+- Context: User And Auth
+- Roles: `backend-engineer.md`, `api-security-reviewer.md`
+- Tier 1 Skills: `03-security.md`, `05-api-standards.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/system/orchestrator.md`
+
+- Context: Event Domain
+- Roles: `backend-engineer.md`
+- Tier 1 Skills: `04-database.md`, `05-api-standards.md`, `03-security.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/system/auto-learning.md`
+
+- Context: Notification Domain
+- Roles: `backend-engineer.md`, `api-security-reviewer.md`
+- Tier 1 Skills: `05-api-standards.md`, `03-security.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/rules/tier-0/11-agent-behavior.md`
+
 ## <section id="user-and-auth"> User And Auth
 
 - `user.model.ts` stores account profile data.

@@ -1,9 +1,9 @@
-import { vi, type Mock } from 'vitest';
-import { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
-import { validate } from '../../src/middlewares/validation.middleware';
+import type { NextFunction, Request, Response } from "express";
+import { type Mock, vi } from "vitest";
+import { z } from "zod";
+import { validate } from "../../src/middlewares/validation.middleware";
 
-describe('Validation Middleware', () => {
+describe("Validation Middleware", () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
@@ -13,7 +13,7 @@ describe('Validation Middleware', () => {
   beforeEach(() => {
     jsonMock = vi.fn();
     statusMock = vi.fn().mockReturnValue({ json: jsonMock });
-    
+
     mockRequest = {
       body: {},
     };
@@ -29,10 +29,10 @@ describe('Validation Middleware', () => {
     password: z.string().min(8),
   });
 
-  it('should call next() when validation passes', () => {
+  it("should call next() when validation passes", () => {
     mockRequest.body = {
-      email: 'test@example.com',
-      password: 'password123',
+      email: "test@example.com",
+      password: "password123",
     };
 
     const middleware = validate(testSchema);
@@ -42,10 +42,10 @@ describe('Validation Middleware', () => {
     expect(statusMock).not.toHaveBeenCalled();
   });
 
-  it('should return 400 when email is invalid', () => {
+  it("should return 400 when email is invalid", () => {
     mockRequest.body = {
-      email: 'invalid-email',
-      password: 'password123',
+      email: "invalid-email",
+      password: "password123",
     };
 
     const middleware = validate(testSchema);
@@ -56,20 +56,20 @@ describe('Validation Middleware', () => {
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        message: 'Données invalides',
+        message: "Données invalides",
         errors: expect.arrayContaining([
           expect.objectContaining({
-            field: 'email',
+            field: "email",
           }),
         ]),
       })
     );
   });
 
-  it('should return 400 when password is too short', () => {
+  it("should return 400 when password is too short", () => {
     mockRequest.body = {
-      email: 'test@example.com',
-      password: 'short',
+      email: "test@example.com",
+      password: "short",
     };
 
     const middleware = validate(testSchema);
@@ -82,17 +82,17 @@ describe('Validation Middleware', () => {
         success: false,
         errors: expect.arrayContaining([
           expect.objectContaining({
-            field: 'password',
+            field: "password",
           }),
         ]),
       })
     );
   });
 
-  it('should return multiple errors when multiple fields are invalid', () => {
+  it("should return multiple errors when multiple fields are invalid", () => {
     mockRequest.body = {
-      email: 'invalid',
-      password: 'short',
+      email: "invalid",
+      password: "short",
     };
 
     const middleware = validate(testSchema);
@@ -102,16 +102,16 @@ describe('Validation Middleware', () => {
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
         errors: expect.arrayContaining([
-          expect.objectContaining({ field: 'email' }),
-          expect.objectContaining({ field: 'password' }),
+          expect.objectContaining({ field: "email" }),
+          expect.objectContaining({ field: "password" }),
         ]),
       })
     );
   });
 
-  it('should return 400 when required field is missing', () => {
+  it("should return 400 when required field is missing", () => {
     mockRequest.body = {
-      email: 'test@example.com',
+      email: "test@example.com",
       // password is missing
     };
 
@@ -122,4 +122,3 @@ describe('Validation Middleware', () => {
     expect(statusMock).toHaveBeenCalledWith(400);
   });
 });
-
