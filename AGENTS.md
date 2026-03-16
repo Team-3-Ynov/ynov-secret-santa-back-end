@@ -26,7 +26,7 @@
 | ----- | ----- |
 | **Product** | Ynov Secret Santa Backend — REST API for events, invitations, exclusions, draw and notifications |
 | **Phase** | v1 |
-| **Stack** | TypeScript · Node.js 20+ · Express 5 · PostgreSQL 16 · Zod · JWT · Jest |
+| **Stack** | TypeScript · Node.js 20+ · Express 5 · PostgreSQL 16 · Zod · JWT · Vitest |
 | **Monorepo** | Single package with pnpm |
 | **Architecture** | Layered monolith |
 

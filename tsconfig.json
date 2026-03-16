@@ -9,7 +9,7 @@
     ],
     "types": [
       "node",
-      "jest"
+      "vitest/globals"
     ],
     "sourceMap": true,
     "strict": true,

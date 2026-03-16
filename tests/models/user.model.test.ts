@@ -1,20 +1,21 @@
+import { vi, type Mock } from 'vitest';
 import { UserModel } from '../../src/models/user.model';
 import { pool } from '../../src/config/database';
 import bcrypt from 'bcrypt';
 
 // Mock de la connexion à la base de données
-jest.mock('../../src/config/database', () => ({
+vi.mock('../../src/config/database', () => ({
   pool: {
-    query: jest.fn(),
+    query: vi.fn(),
   },
 }));
 
 // Mock de bcrypt
-jest.mock('bcrypt');
+vi.mock('bcrypt');
 
 describe('UserModel', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('create', () => {
@@ -35,8 +36,8 @@ describe('UserModel', () => {
         }],
       };
 
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
-      (pool.query as jest.Mock).mockResolvedValue(mockResult);
+      (bcrypt.hash as Mock).mockResolvedValue('hashed_password');
+      (pool.query as Mock).mockResolvedValue(mockResult);
 
       const result = await UserModel.create(userData);
 
@@ -70,8 +71,8 @@ describe('UserModel', () => {
         }],
       };
 
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed_password');
-      (pool.query as jest.Mock).mockResolvedValue(mockResult);
+      (bcrypt.hash as Mock).mockResolvedValue('hashed_password');
+      (pool.query as Mock).mockResolvedValue(mockResult);
 
       const result = await UserModel.create(userData);
 
@@ -94,8 +95,8 @@ describe('UserModel', () => {
     };
 
     it('should return user without password when credentials are valid', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [mockUser] });
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (pool.query as Mock).mockResolvedValue({ rows: [mockUser] });
+      (bcrypt.compare as Mock).mockResolvedValue(true);
 
       const result = await UserModel.verifyCredentials('test@example.com', 'correctPassword');
 
@@ -115,7 +116,7 @@ describe('UserModel', () => {
     });
 
     it('should return null when user not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+      (pool.query as Mock).mockResolvedValue({ rows: [] });
 
       const result = await UserModel.verifyCredentials('notfound@example.com', 'password');
 
@@ -124,8 +125,8 @@ describe('UserModel', () => {
     });
 
     it('should return null when password is incorrect', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [mockUser] });
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      (pool.query as Mock).mockResolvedValue({ rows: [mockUser] });
+      (bcrypt.compare as Mock).mockResolvedValue(false);
 
       const result = await UserModel.verifyCredentials('test@example.com', 'wrongPassword');
 
@@ -144,7 +145,7 @@ describe('UserModel', () => {
         updated_at: new Date(),
       };
 
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [mockUser] });
+      (pool.query as Mock).mockResolvedValue({ rows: [mockUser] });
 
       const result = await UserModel.findById(1);
 
@@ -156,7 +157,7 @@ describe('UserModel', () => {
     });
 
     it('should return null when user not found', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+      (pool.query as Mock).mockResolvedValue({ rows: [] });
 
       const result = await UserModel.findById(999);
 
@@ -166,7 +167,7 @@ describe('UserModel', () => {
 
   describe('emailExists', () => {
     it('should return true when email exists', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
+      (pool.query as Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
 
       const result = await UserModel.emailExists('test@example.com');
 
@@ -178,7 +179,7 @@ describe('UserModel', () => {
     });
 
     it('should return false when email does not exist', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+      (pool.query as Mock).mockResolvedValue({ rows: [] });
 
       const result = await UserModel.emailExists('notfound@example.com');
 
@@ -188,7 +189,7 @@ describe('UserModel', () => {
 
   describe('usernameExists', () => {
     it('should return true when username exists', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
+      (pool.query as Mock).mockResolvedValue({ rows: [{ 1: 1 }] });
 
       const result = await UserModel.usernameExists('testuser');
 
@@ -200,7 +201,7 @@ describe('UserModel', () => {
     });
 
     it('should return false when username does not exist', async () => {
-      (pool.query as jest.Mock).mockResolvedValue({ rows: [] });
+      (pool.query as Mock).mockResolvedValue({ rows: [] });
 
       const result = await UserModel.usernameExists('notfound');
 
