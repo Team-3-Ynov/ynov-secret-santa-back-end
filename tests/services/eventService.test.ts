@@ -1,21 +1,22 @@
 import { createEvent, createInvitation, joinEvent, findEventById, deleteEvent, updateEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, addExclusion, getEventExclusions, deleteExclusion } from '../../src/services/event.service';
+import { vi, type Mock } from 'vitest';
 
 describe('EventService - Unified Dependency Injection Tests', () => {
     let mockPool: any;
-    let mockClientQuery: jest.Mock;
-    let mockClientRelease: jest.Mock;
-    let mockPoolQuery: jest.Mock;
+    let mockClientQuery: Mock;
+    let mockClientRelease: Mock;
+    let mockPoolQuery: Mock;
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
 
-        mockClientQuery = jest.fn();
-        mockClientRelease = jest.fn();
-        mockPoolQuery = jest.fn();
+        mockClientQuery = vi.fn();
+        mockClientRelease = vi.fn();
+        mockPoolQuery = vi.fn();
 
         mockPool = {
             query: mockPoolQuery,
-            connect: jest.fn(() => Promise.resolve({
+            connect: vi.fn(() => Promise.resolve({
                 query: mockClientQuery,
                 release: mockClientRelease,
             })),
@@ -23,7 +24,7 @@ describe('EventService - Unified Dependency Injection Tests', () => {
     });
 
     afterEach(() => {
-        jest.restoreAllMocks();
+        vi.restoreAllMocks();
     });
 
     describe('createEvent', () => {
