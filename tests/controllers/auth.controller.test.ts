@@ -1,25 +1,27 @@
+import { vi, type Mock } from 'vitest';
 import { Request, Response } from 'express';
 import { AuthController } from '../../src/controllers/auth.controller';
 import { UserModel } from '../../src/models/user.model';
 import * as jwtUtils from '../../src/utils/jwt.utils';
+import { getUserStats } from '../../src/services/user.service';
 
 import { RefreshTokenModel } from '../../src/models/refresh_token.model';
 
 // Mock des dépendances
-jest.mock('../../src/models/user.model');
-jest.mock('../../src/models/refresh_token.model');
-jest.mock('../../src/utils/jwt.utils');
-jest.mock('../../src/services/user.service');
+vi.mock('../../src/models/user.model');
+vi.mock('../../src/models/refresh_token.model');
+vi.mock('../../src/utils/jwt.utils');
+vi.mock('../../src/services/user.service');
 
 describe('AuthController', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
-  let jsonMock: jest.Mock;
-  let statusMock: jest.Mock;
+  let jsonMock: Mock;
+  let statusMock: Mock;
 
   beforeEach(() => {
-    jsonMock = jest.fn();
-    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    jsonMock = vi.fn();
+    statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     mockRequest = {
       body: {},
@@ -29,7 +31,7 @@ describe('AuthController', () => {
       json: jsonMock,
     };
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('register', () => {
@@ -50,12 +52,12 @@ describe('AuthController', () => {
 
       mockRequest.body = validRegistrationData;
 
-      (UserModel.emailExists as jest.Mock).mockResolvedValue(false);
-      (UserModel.usernameExists as jest.Mock).mockResolvedValue(false);
-      (UserModel.create as jest.Mock).mockResolvedValue(mockUser);
-      (RefreshTokenModel.create as jest.Mock).mockResolvedValue({ token: 'mock-refresh-token' });
-      (jwtUtils.signAccessToken as jest.Mock).mockReturnValue('mock-jwt-token');
-      (jwtUtils.signRefreshToken as jest.Mock).mockReturnValue('mock-refresh-token');
+      (UserModel.emailExists as Mock).mockResolvedValue(false);
+      (UserModel.usernameExists as Mock).mockResolvedValue(false);
+      (UserModel.create as Mock).mockResolvedValue(mockUser);
+      (RefreshTokenModel.create as Mock).mockResolvedValue({ token: 'mock-refresh-token' });
+      (jwtUtils.signAccessToken as Mock).mockReturnValue('mock-jwt-token');
+      (jwtUtils.signRefreshToken as Mock).mockReturnValue('mock-refresh-token');
 
       await AuthController.register(mockRequest as Request, mockResponse as Response);
 
@@ -81,7 +83,7 @@ describe('AuthController', () => {
     it('should return 409 if email already exists', async () => {
       mockRequest.body = validRegistrationData;
 
-      (UserModel.emailExists as jest.Mock).mockResolvedValue(true);
+      (UserModel.emailExists as Mock).mockResolvedValue(true);
 
       await AuthController.register(mockRequest as Request, mockResponse as Response);
 
@@ -96,8 +98,8 @@ describe('AuthController', () => {
     it('should return 409 if username already exists', async () => {
       mockRequest.body = validRegistrationData;
 
-      (UserModel.emailExists as jest.Mock).mockResolvedValue(false);
-      (UserModel.usernameExists as jest.Mock).mockResolvedValue(true);
+      (UserModel.emailExists as Mock).mockResolvedValue(false);
+      (UserModel.usernameExists as Mock).mockResolvedValue(true);
 
       await AuthController.register(mockRequest as Request, mockResponse as Response);
 
@@ -112,7 +114,7 @@ describe('AuthController', () => {
     it('should return 500 on database error', async () => {
       mockRequest.body = validRegistrationData;
 
-      (UserModel.emailExists as jest.Mock).mockRejectedValue(new Error('DB Error'));
+      (UserModel.emailExists as Mock).mockRejectedValue(new Error('DB Error'));
 
       await AuthController.register(mockRequest as Request, mockResponse as Response);
 
@@ -143,10 +145,10 @@ describe('AuthController', () => {
     it('should login successfully with valid credentials', async () => {
       mockRequest.body = validLoginData;
 
-      (UserModel.verifyCredentials as jest.Mock).mockResolvedValue(mockUserWithoutPassword);
-      (RefreshTokenModel.create as jest.Mock).mockResolvedValue({ token: 'mock-refresh-token' });
-      (jwtUtils.signAccessToken as jest.Mock).mockReturnValue('mock-jwt-token');
-      (jwtUtils.signRefreshToken as jest.Mock).mockReturnValue('mock-refresh-token');
+      (UserModel.verifyCredentials as Mock).mockResolvedValue(mockUserWithoutPassword);
+      (RefreshTokenModel.create as Mock).mockResolvedValue({ token: 'mock-refresh-token' });
+      (jwtUtils.signAccessToken as Mock).mockReturnValue('mock-jwt-token');
+      (jwtUtils.signRefreshToken as Mock).mockReturnValue('mock-refresh-token');
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
 
@@ -166,7 +168,7 @@ describe('AuthController', () => {
     it('should return 401 if credentials are invalid', async () => {
       mockRequest.body = validLoginData;
 
-      (UserModel.verifyCredentials as jest.Mock).mockResolvedValue(null);
+      (UserModel.verifyCredentials as Mock).mockResolvedValue(null);
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
 
@@ -180,7 +182,7 @@ describe('AuthController', () => {
     it('should return 500 on database error', async () => {
       mockRequest.body = validLoginData;
 
-      (UserModel.verifyCredentials as jest.Mock).mockRejectedValue(new Error('DB Error'));
+      (UserModel.verifyCredentials as Mock).mockRejectedValue(new Error('DB Error'));
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
 
@@ -194,10 +196,10 @@ describe('AuthController', () => {
     it('should not return password in response', async () => {
       mockRequest.body = validLoginData;
 
-      (UserModel.verifyCredentials as jest.Mock).mockResolvedValue(mockUserWithoutPassword);
-      (RefreshTokenModel.create as jest.Mock).mockResolvedValue({ token: 'mock-refresh-token' });
-      (jwtUtils.signAccessToken as jest.Mock).mockReturnValue('mock-jwt-token');
-      (jwtUtils.signRefreshToken as jest.Mock).mockReturnValue('mock-refresh-token');
+      (UserModel.verifyCredentials as Mock).mockResolvedValue(mockUserWithoutPassword);
+      (RefreshTokenModel.create as Mock).mockResolvedValue({ token: 'mock-refresh-token' });
+      (jwtUtils.signAccessToken as Mock).mockReturnValue('mock-jwt-token');
+      (jwtUtils.signRefreshToken as Mock).mockReturnValue('mock-refresh-token');
 
       await AuthController.login(mockRequest as Request, mockResponse as Response);
 
@@ -225,10 +227,9 @@ describe('AuthController', () => {
       };
 
       mockRequest = { ...mockRequest, user: { id: 1, email: 'test@example.com' } } as any;
-      (UserModel.findById as jest.Mock).mockResolvedValue(mockUser);
+      (UserModel.findById as Mock).mockResolvedValue(mockUser);
 
-      const { getUserStats } = require('../../src/services/user.service');
-      (getUserStats as jest.Mock).mockResolvedValue(mockStats);
+      (getUserStats as Mock).mockResolvedValue(mockStats);
 
       await AuthController.getMe(mockRequest as Request, mockResponse as Response);
 
@@ -276,7 +277,7 @@ describe('AuthController', () => {
 
     it('should return 404 if user not found', async () => {
       mockRequest = { ...mockRequest, user: { id: 999, email: 'test@example.com' } } as any;
-      (UserModel.findById as jest.Mock).mockResolvedValue(null);
+      (UserModel.findById as Mock).mockResolvedValue(null);
 
       await AuthController.getMe(mockRequest as Request, mockResponse as Response);
 

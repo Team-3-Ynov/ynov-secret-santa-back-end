@@ -1,18 +1,19 @@
+import { vi, type Mock } from 'vitest';
 import { Request, Response } from 'express';
 import { createEventHandler, addExclusionHandler, getEventExclusionsHandler, deleteExclusionHandler } from '../../src/controllers/event.controller';
 import * as eventService from '../../src/services/event.service';
 
-jest.mock('../../src/services/event.service');
+vi.mock('../../src/services/event.service');
 
 describe('Event Controller - Exclusions', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
-  let statusMock: jest.Mock;
-  let jsonMock: jest.Mock;
+  let statusMock: Mock;
+  let jsonMock: Mock;
 
   beforeEach(() => {
-    jsonMock = jest.fn();
-    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    jsonMock = vi.fn();
+    statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     mockReq = {
       params: { id: 'event-1' },
@@ -22,7 +23,7 @@ describe('Event Controller - Exclusions', () => {
 
     mockRes = { status: statusMock, json: jsonMock } as any;
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('addExclusionHandler', () => {
@@ -33,21 +34,21 @@ describe('Event Controller - Exclusions', () => {
     });
 
     it('should return 404 if event not found', async () => {
-      (eventService.findEventById as jest.Mock).mockResolvedValue(null);
+      (eventService.findEventById as Mock).mockResolvedValue(null);
       await addExclusionHandler(mockReq as Request, mockRes as Response);
       expect(statusMock).toHaveBeenCalledWith(404);
     });
 
     it('should return 403 if user is not the owner', async () => {
-      (eventService.findEventById as jest.Mock).mockResolvedValue({ id: 'event-1', ownerId: 2 });
+      (eventService.findEventById as Mock).mockResolvedValue({ id: 'event-1', ownerId: 2 });
       await addExclusionHandler(mockReq as Request, mockRes as Response);
       expect(statusMock).toHaveBeenCalledWith(403);
     });
 
     it('should add exclusion and return all exclusions', async () => {
-      (eventService.findEventById as jest.Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
+      (eventService.findEventById as Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
       const mockExclusions = [{ id: 1, event_id: 'event-1', giver_id: 1, receiver_id: 2 }];
-      (eventService.getEventExclusions as jest.Mock).mockResolvedValue(mockExclusions);
+      (eventService.getEventExclusions as Mock).mockResolvedValue(mockExclusions);
 
       mockReq.body = { giverId: 1, receiverId: 2 };
       await addExclusionHandler(mockReq as Request, mockRes as Response);
@@ -60,9 +61,9 @@ describe('Event Controller - Exclusions', () => {
 
   describe('getEventExclusionsHandler', () => {
     it('should return exclusions if user is owner', async () => {
-      (eventService.findEventById as jest.Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
+      (eventService.findEventById as Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
       const mockExclusions = [{ id: 1, event_id: 'event-1', giver_id: 1, receiver_id: 2 }];
-      (eventService.getEventExclusions as jest.Mock).mockResolvedValue(mockExclusions);
+      (eventService.getEventExclusions as Mock).mockResolvedValue(mockExclusions);
 
       await getEventExclusionsHandler(mockReq as Request, mockRes as Response);
 
@@ -73,8 +74,8 @@ describe('Event Controller - Exclusions', () => {
 
   describe('deleteExclusionHandler', () => {
     it('should delete exclusion and return 200', async () => {
-      (eventService.findEventById as jest.Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
-      (eventService.deleteExclusion as jest.Mock).mockResolvedValue(true);
+      (eventService.findEventById as Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
+      (eventService.deleteExclusion as Mock).mockResolvedValue(true);
 
       mockReq.params = { id: 'event-1', exclusionId: '1' };
       await deleteExclusionHandler(mockReq as Request, mockRes as Response);
@@ -84,8 +85,8 @@ describe('Event Controller - Exclusions', () => {
     });
 
     it('should return 404 if exclusion not found', async () => {
-      (eventService.findEventById as jest.Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
-      (eventService.deleteExclusion as jest.Mock).mockResolvedValue(false);
+      (eventService.findEventById as Mock).mockResolvedValue({ id: 'event-1', ownerId: 1 });
+      (eventService.deleteExclusion as Mock).mockResolvedValue(false);
 
       mockReq.params = { id: 'event-1', exclusionId: '999' };
       await deleteExclusionHandler(mockReq as Request, mockRes as Response);
@@ -98,12 +99,12 @@ describe('Event Controller - Exclusions', () => {
 describe('createEventHandler', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
-  let statusMock: jest.Mock;
-  let jsonMock: jest.Mock;
+  let statusMock: Mock;
+  let jsonMock: Mock;
 
   beforeEach(() => {
-    jsonMock = jest.fn();
-    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    jsonMock = vi.fn();
+    statusMock = vi.fn().mockReturnValue({ json: jsonMock });
 
     // Injecter user.id pour l'authentification
     mockReq = {
@@ -113,7 +114,7 @@ describe('createEventHandler', () => {
 
     mockRes = { status: statusMock, json: jsonMock } as any;
 
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return 400 on invalid data', async () => {
@@ -134,7 +135,7 @@ describe('createEventHandler', () => {
       ownerId: 1,
       createdAt: new Date()
     };
-    (eventService.createEvent as jest.Mock).mockResolvedValue(createdEvent);
+    (eventService.createEvent as Mock).mockResolvedValue(createdEvent);
 
     mockReq.body = { title: 'Test', eventDate: new Date(Date.now() + 3600 * 1000).toISOString() };
 

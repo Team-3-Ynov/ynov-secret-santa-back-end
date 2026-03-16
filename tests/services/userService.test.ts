@@ -1,28 +1,29 @@
+import { vi, type Mock } from 'vitest';
 import { getPublicUserProfile, getUserStats, updateUserProfile, updateUserPassword } from '../../src/services/user.service';
 import { pool } from '../../src/config/database';
 import { UserModel } from '../../src/models/user.model';
 
-jest.mock('../../src/config/database', () => ({
+vi.mock('../../src/config/database', () => ({
     pool: {
-        query: jest.fn(),
+        query: vi.fn(),
     },
 }));
 
-jest.mock('../../src/models/user.model', () => ({
+vi.mock('../../src/models/user.model', () => ({
     UserModel: {
-        emailExistsForOtherUser: jest.fn(),
-        usernameExistsForOtherUser: jest.fn(),
-        update: jest.fn(),
-        verifyPassword: jest.fn(),
-        updatePassword: jest.fn(),
+        emailExistsForOtherUser: vi.fn(),
+        usernameExistsForOtherUser: vi.fn(),
+        update: vi.fn(),
+        verifyPassword: vi.fn(),
+        updatePassword: vi.fn(),
     },
 }));
 
 describe('UserService', () => {
-    const mockPool = pool as unknown as { query: jest.Mock };
+    const mockPool = pool as unknown as { query: Mock };
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.clearAllMocks();
     });
 
     describe('getPublicUserProfile', () => {
@@ -100,9 +101,9 @@ describe('UserService', () => {
 
     describe('updateUserProfile', () => {
         it('should update profile successfully', async () => {
-            (UserModel.emailExistsForOtherUser as jest.Mock).mockResolvedValue(false);
-            (UserModel.usernameExistsForOtherUser as jest.Mock).mockResolvedValue(false);
-            (UserModel.update as jest.Mock).mockResolvedValue({ id: 1, username: 'newname', email: 'new@test.com' });
+            (UserModel.emailExistsForOtherUser as Mock).mockResolvedValue(false);
+            (UserModel.usernameExistsForOtherUser as Mock).mockResolvedValue(false);
+            (UserModel.update as Mock).mockResolvedValue({ id: 1, username: 'newname', email: 'new@test.com' });
 
             const result = await updateUserProfile(1, { username: 'newname', email: 'new@test.com' });
 
@@ -111,7 +112,7 @@ describe('UserService', () => {
         });
 
         it('should fail if email taken', async () => {
-            (UserModel.emailExistsForOtherUser as jest.Mock).mockResolvedValue(true);
+            (UserModel.emailExistsForOtherUser as Mock).mockResolvedValue(true);
 
             const result = await updateUserProfile(1, { email: 'taken@test.com' });
 
@@ -122,8 +123,8 @@ describe('UserService', () => {
 
     describe('updateUserPassword', () => {
         it('should update password successfully', async () => {
-            (UserModel.verifyPassword as jest.Mock).mockResolvedValue(true);
-            (UserModel.updatePassword as jest.Mock).mockResolvedValue(true);
+            (UserModel.verifyPassword as Mock).mockResolvedValue(true);
+            (UserModel.updatePassword as Mock).mockResolvedValue(true);
 
             const result = await updateUserPassword(1, 'old', 'new');
 
@@ -131,7 +132,7 @@ describe('UserService', () => {
         });
 
         it('should fail if current password incorrect', async () => {
-            (UserModel.verifyPassword as jest.Mock).mockResolvedValue(false);
+            (UserModel.verifyPassword as Mock).mockResolvedValue(false);
 
             const result = await updateUserPassword(1, 'wrong', 'new');
 

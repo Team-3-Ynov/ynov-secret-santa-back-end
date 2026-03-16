@@ -1,8 +1,10 @@
+import { vi, type Mock } from 'vitest';
 import request from 'supertest';
 import app from '../../src/app';
+import * as eventService from '../../src/services/event.service';
 
 // Mock du middleware authenticate pour bypasser la vérification JWT en tests
-jest.mock('../../src/middlewares/auth.middleware', () => ({
+vi.mock('../../src/middlewares/auth.middleware', () => ({
   authenticate: (req: any, res: any, next: any) => {
     // Injecter un user complet comme le fait le middleware
     req.user = { id: 1, email: 'test@example.com' };
@@ -11,14 +13,14 @@ jest.mock('../../src/middlewares/auth.middleware', () => ({
 }));
 
 // Mock du service email pour éviter les erreurs de connexion SMTP
-jest.mock('../../src/services/email.service', () => ({
-  sendInvitationEmail: jest.fn().mockResolvedValue(undefined),
-  sendDrawResultEmail: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../src/services/email.service', () => ({
+  sendInvitationEmail: vi.fn().mockResolvedValue(undefined),
+  sendDrawResultEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock du service notification pour éviter les appels BDD
-jest.mock('../../src/services/notification.service', () => ({
-  createNotification: jest.fn().mockResolvedValue(undefined),
+vi.mock('../../src/services/notification.service', () => ({
+  createNotification: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock de la couche service pour ne pas toucher la BDD
@@ -56,8 +58,8 @@ const mockAssignment = {
   receiver_id: 2,
 };
 
-jest.mock('../../src/services/event.service', () => ({
-  createEvent: jest.fn().mockImplementation((payload) => Promise.resolve({
+vi.mock('../../src/services/event.service', () => ({
+  createEvent: vi.fn().mockImplementation((payload) => Promise.resolve({
     id: 'uuid-1',
     title: payload.title,
     description: payload.description ?? null,
@@ -66,14 +68,14 @@ jest.mock('../../src/services/event.service', () => ({
     ownerId: payload.ownerId,
     createdAt: new Date(),
   })),
-  findEventById: jest.fn(),
-  updateEvent: jest.fn().mockImplementation((id, payload) => Promise.resolve({
+  findEventById: vi.fn(),
+  updateEvent: vi.fn().mockImplementation((id, payload) => Promise.resolve({
     ...mockEvent,
     ...payload,
     id,
   })),
-  deleteEvent: jest.fn().mockResolvedValue(true),
-  createInvitation: jest.fn().mockImplementation((eventId, email) => Promise.resolve({
+  deleteEvent: vi.fn().mockResolvedValue(true),
+  createInvitation: vi.fn().mockImplementation((eventId, email) => Promise.resolve({
     id: 'invit-1',
     event_id: eventId,
     email: email,
@@ -81,17 +83,15 @@ jest.mock('../../src/services/event.service', () => ({
     created_at: new Date(),
     updated_at: new Date(),
   })),
-  getEventInvitations: jest.fn(),
-  findInvitationById: jest.fn(),
-  deleteInvitation: jest.fn().mockResolvedValue(true),
-  joinEvent: jest.fn(),
-  performDraw: jest.fn().mockResolvedValue({ assignments: [], notifications: [] }),
-  getAssignment: jest.fn(),
-  getEventsByUserId: jest.fn(),
-  getEventParticipants: jest.fn(),
+  getEventInvitations: vi.fn(),
+  findInvitationById: vi.fn(),
+  deleteInvitation: vi.fn().mockResolvedValue(true),
+  joinEvent: vi.fn(),
+  performDraw: vi.fn().mockResolvedValue({ assignments: [], notifications: [] }),
+  getAssignment: vi.fn(),
+  getEventsByUserId: vi.fn(),
+  getEventParticipants: vi.fn(),
 }));
-
-const eventService = require('../../src/services/event.service');
 
 describe('POST /api/events', () => {
   it('should create an event when authenticated', async () => {
@@ -122,11 +122,11 @@ describe('POST /api/events', () => {
 
 describe('GET /api/events', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return user events', async () => {
-    (eventService.getEventsByUserId as jest.Mock).mockResolvedValue([mockEvent]);
+    (eventService.getEventsByUserId as Mock).mockResolvedValue([mockEvent]);
 
     const res = await request(app)
       .get('/api/events')
@@ -140,11 +140,11 @@ describe('GET /api/events', () => {
 
 describe('GET /api/events/:id', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return event details', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
 
     const res = await request(app)
       .get(`/api/events/${mockEvent.id}`)
@@ -156,7 +156,7 @@ describe('GET /api/events/:id', () => {
   });
 
   it('should return 404 if event not found', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(null);
+    (eventService.findEventById as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .get('/api/events/non-existent-id')
@@ -169,11 +169,11 @@ describe('GET /api/events/:id', () => {
 
 describe('PUT /api/events/:id', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should update an event successfully', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
 
     const res = await request(app)
       .put(`/api/events/${mockEvent.id}`)
@@ -186,7 +186,7 @@ describe('PUT /api/events/:id', () => {
   });
 
   it('should return 404 if event not found', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(null);
+    (eventService.findEventById as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .put('/api/events/non-existent-id')
@@ -198,7 +198,7 @@ describe('PUT /api/events/:id', () => {
 
   it('should return 403 if user is not the owner', async () => {
     const otherUserEvent = { ...mockEvent, ownerId: 999 };
-    (eventService.findEventById as jest.Mock).mockResolvedValue(otherUserEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(otherUserEvent);
 
     const res = await request(app)
       .put(`/api/events/${mockEvent.id}`)
@@ -221,11 +221,11 @@ describe('PUT /api/events/:id', () => {
 
 describe('DELETE /api/events/:id', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should delete an event successfully', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
 
     const res = await request(app)
       .delete(`/api/events/${mockEvent.id}`);
@@ -237,7 +237,7 @@ describe('DELETE /api/events/:id', () => {
   });
 
   it('should return 404 if event not found', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(null);
+    (eventService.findEventById as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .delete('/api/events/non-existent-id');
@@ -248,7 +248,7 @@ describe('DELETE /api/events/:id', () => {
 
   it('should return 403 if user is not the owner', async () => {
     const otherUserEvent = { ...mockEvent, ownerId: 999 };
-    (eventService.findEventById as jest.Mock).mockResolvedValue(otherUserEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(otherUserEvent);
 
     const res = await request(app)
       .delete(`/api/events/${mockEvent.id}`);
@@ -283,12 +283,12 @@ describe('POST /api/events/:id/invite', () => {
 
 describe('GET /api/events/:id/invitations', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return invitations list for owner', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (eventService.getEventInvitations as jest.Mock).mockResolvedValue([mockInvitation]);
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
+    (eventService.getEventInvitations as Mock).mockResolvedValue([mockInvitation]);
 
     const res = await request(app)
       .get(`/api/events/${mockEvent.id}/invitations`)
@@ -302,7 +302,7 @@ describe('GET /api/events/:id/invitations', () => {
 
   it('should return 403 if user is not the owner', async () => {
     const otherUserEvent = { ...mockEvent, ownerId: 999 };
-    (eventService.findEventById as jest.Mock).mockResolvedValue(otherUserEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(otherUserEvent);
 
     const res = await request(app)
       .get(`/api/events/${mockEvent.id}/invitations`)
@@ -312,7 +312,7 @@ describe('GET /api/events/:id/invitations', () => {
   });
 
   it('should return 404 if event not found', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(null);
+    (eventService.findEventById as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .get('/api/events/non-existent/invitations')
@@ -324,12 +324,12 @@ describe('GET /api/events/:id/invitations', () => {
 
 describe('DELETE /api/events/:id/invitations/:invitationId', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should delete a pending invitation successfully', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (eventService.findInvitationById as jest.Mock).mockResolvedValue(mockInvitation);
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
+    (eventService.findInvitationById as Mock).mockResolvedValue(mockInvitation);
 
     const res = await request(app)
       .delete(`/api/events/${mockEvent.id}/invitations/${mockInvitation.id}`);
@@ -340,8 +340,8 @@ describe('DELETE /api/events/:id/invitations/:invitationId', () => {
   });
 
   it('should return 400 if invitation is already accepted', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (eventService.findInvitationById as jest.Mock).mockResolvedValue({
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
+    (eventService.findInvitationById as Mock).mockResolvedValue({
       ...mockInvitation,
       status: 'accepted',
     });
@@ -355,7 +355,7 @@ describe('DELETE /api/events/:id/invitations/:invitationId', () => {
 
   it('should return 403 if user is not the owner', async () => {
     const otherUserEvent = { ...mockEvent, ownerId: 999 };
-    (eventService.findEventById as jest.Mock).mockResolvedValue(otherUserEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(otherUserEvent);
 
     const res = await request(app)
       .delete(`/api/events/${mockEvent.id}/invitations/${mockInvitation.id}`);
@@ -364,8 +364,8 @@ describe('DELETE /api/events/:id/invitations/:invitationId', () => {
   });
 
   it('should return 404 if invitation not found', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (eventService.findInvitationById as jest.Mock).mockResolvedValue(null);
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
+    (eventService.findInvitationById as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .delete(`/api/events/${mockEvent.id}/invitations/non-existent`);
@@ -377,11 +377,11 @@ describe('DELETE /api/events/:id/invitations/:invitationId', () => {
 
 describe('GET /api/events/:id/participants', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return participants list', async () => {
-    (eventService.getEventParticipants as jest.Mock).mockResolvedValue([mockParticipant]);
+    (eventService.getEventParticipants as Mock).mockResolvedValue([mockParticipant]);
 
     const res = await request(app)
       .get(`/api/events/${mockEvent.id}/participants`)
@@ -395,11 +395,11 @@ describe('GET /api/events/:id/participants', () => {
 
 describe('POST /api/events/:id/join', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should join an event successfully', async () => {
-    (eventService.joinEvent as jest.Mock).mockResolvedValue({ success: true, message: 'Vous avez rejoint l\'événement avec succès !' });
+    (eventService.joinEvent as Mock).mockResolvedValue({ success: true, message: 'Vous avez rejoint l\'événement avec succès !' });
 
     const res = await request(app)
       .post(`/api/events/${mockEvent.id}/join`);
@@ -409,7 +409,7 @@ describe('POST /api/events/:id/join', () => {
   });
 
   it('should return 400 if no invitation found', async () => {
-    (eventService.joinEvent as jest.Mock).mockResolvedValue({ success: false, message: 'Aucune invitation trouvée pour cet événement.' });
+    (eventService.joinEvent as Mock).mockResolvedValue({ success: false, message: 'Aucune invitation trouvée pour cet événement.' });
 
     const res = await request(app)
       .post(`/api/events/${mockEvent.id}/join`);
@@ -421,12 +421,12 @@ describe('POST /api/events/:id/join', () => {
 
 describe('POST /api/events/:id/draw', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should perform draw successfully', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(mockEvent);
-    (eventService.performDraw as jest.Mock).mockResolvedValue({
+    (eventService.findEventById as Mock).mockResolvedValue(mockEvent);
+    (eventService.performDraw as Mock).mockResolvedValue({
       assignments: [mockAssignment],
       notifications: [
         {
@@ -450,7 +450,7 @@ describe('POST /api/events/:id/draw', () => {
 
   it('should return 403 if user is not the owner', async () => {
     const otherUserEvent = { ...mockEvent, ownerId: 999 };
-    (eventService.findEventById as jest.Mock).mockResolvedValue(otherUserEvent);
+    (eventService.findEventById as Mock).mockResolvedValue(otherUserEvent);
 
     const res = await request(app)
       .post(`/api/events/${mockEvent.id}/draw`);
@@ -460,7 +460,7 @@ describe('POST /api/events/:id/draw', () => {
   });
 
   it('should return 404 if event not found', async () => {
-    (eventService.findEventById as jest.Mock).mockResolvedValue(null);
+    (eventService.findEventById as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .post('/api/events/non-existent/draw');
@@ -471,11 +471,11 @@ describe('POST /api/events/:id/draw', () => {
 
 describe('GET /api/events/:id/my-assignment', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return user assignment', async () => {
-    (eventService.getAssignment as jest.Mock).mockResolvedValue(mockAssignment);
+    (eventService.getAssignment as Mock).mockResolvedValue(mockAssignment);
 
     const res = await request(app)
       .get(`/api/events/${mockEvent.id}/my-assignment`);
@@ -486,7 +486,7 @@ describe('GET /api/events/:id/my-assignment', () => {
   });
 
   it('should return 404 if no assignment found', async () => {
-    (eventService.getAssignment as jest.Mock).mockResolvedValue(null);
+    (eventService.getAssignment as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .get(`/api/events/${mockEvent.id}/my-assignment`);
