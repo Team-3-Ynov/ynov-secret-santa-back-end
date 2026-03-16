@@ -58,11 +58,9 @@ function resolveRefs(obj: unknown, baseSpec: Record<string, unknown>): unknown {
       const componentPath = ref.split("#/components/")[1];
       const parts = componentPath.split("/");
 
-      let resolved: unknown = baseSpec.components;
       for (const part of parts) {
-        if (resolved && typeof resolved === "object") {
-          // semgrep-disable-next-line javascript.lang.security.audit.prototype-pollution.prototype-pollution-loop.prototype-pollution-loop
-          resolved = (resolved as Record<string, unknown>)[part];
+        if (part === "__proto__" || part === "constructor" || part === "prototype") {
+          throw new Error(`Unsafe OpenAPI $ref segment detected: ${part}`);
         }
       }
 

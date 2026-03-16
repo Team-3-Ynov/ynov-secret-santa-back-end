@@ -304,7 +304,7 @@ describe("AuthController", () => {
 
     it("should return 401 when refresh token is not found in DB", async () => {
       mockRequest.body = { refreshToken: "token" };
-      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1 });
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1, type: "refresh" });
       (RefreshTokenModel.findByToken as Mock).mockResolvedValue(null);
 
       await AuthController.refresh(mockRequest as Request, mockResponse as Response);
@@ -318,9 +318,10 @@ describe("AuthController", () => {
 
     it("should revoke all tokens when reused revoked token is detected", async () => {
       mockRequest.body = { refreshToken: "revoked-token" };
-      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 3 });
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 3, type: "refresh" });
       (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
         token: "revoked-token",
+        user_id: 3,
         revoked: true,
         expires_at: new Date(Date.now() + 60_000),
       });
@@ -333,9 +334,10 @@ describe("AuthController", () => {
 
     it("should return 401 when token is expired", async () => {
       mockRequest.body = { refreshToken: "expired-token" };
-      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1 });
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1, type: "refresh" });
       (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
         token: "expired-token",
+        user_id: 1,
         revoked: false,
         expires_at: new Date(Date.now() - 1_000),
       });
@@ -348,9 +350,10 @@ describe("AuthController", () => {
 
     it("should return 404 when user from refresh token no longer exists", async () => {
       mockRequest.body = { refreshToken: "valid-token" };
-      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 99 });
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 99, type: "refresh" });
       (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
         token: "valid-token",
+        user_id: 99,
         revoked: false,
         expires_at: new Date(Date.now() + 60_000),
       });
@@ -365,9 +368,10 @@ describe("AuthController", () => {
       mockRequest.body = { refreshToken: "valid-token" };
       const user = { id: 1, email: "ok@example.com", username: "ok" };
 
-      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1 });
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1, type: "refresh" });
       (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
         token: "valid-token",
+        user_id: 1,
         revoked: false,
         expires_at: new Date(Date.now() + 60_000),
       });

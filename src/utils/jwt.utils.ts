@@ -1,9 +1,16 @@
 import jwt from "jsonwebtoken";
 import type { UserWithoutPassword } from "../types/user.types";
 
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-change-in-production";
-const REFRESH_TOKEN_SECRET =
-  process.env.REFRESH_TOKEN_SECRET || "refresh-secret-change-in-production";
+const getRequiredEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+};
+
+const JWT_SECRET = getRequiredEnv("JWT_SECRET");
+const REFRESH_TOKEN_SECRET = getRequiredEnv("REFRESH_TOKEN_SECRET");
 
 const ACCESS_TOKEN_EXPIRES_IN = "15m"; // 15 minutes
 const REFRESH_TOKEN_EXPIRES_IN = "7d"; // 7 jours
@@ -18,6 +25,22 @@ export interface RefreshTokenPayload {
   userId: number;
   type: "refresh";
 }
+
+const isAccessTokenPayload = (value: unknown): value is AccessTokenPayload => {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.userId === "number" &&
+    typeof payload.email === "string" &&
+    payload.type === "access"
+  );
+};
+
+const isRefreshTokenPayload = (value: unknown): value is RefreshTokenPayload => {
+  if (!value || typeof value !== "object") return false;
+  const payload = value as Record<string, unknown>;
+  return typeof payload.userId === "number" && payload.type === "refresh";
+};
 
 /**
  * Génère un Access Token (courte durée)
@@ -51,7 +74,8 @@ export const signRefreshToken = (userId: number): string => {
  */
 export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
   try {
-    return jwt.verify(token, JWT_SECRET) as AccessTokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return isAccessTokenPayload(decoded) ? decoded : null;
   } catch {
     return null;
   }
@@ -62,7 +86,8 @@ export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
  */
 export const verifyRefreshToken = (token: string): RefreshTokenPayload | null => {
   try {
-    return jwt.verify(token, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
+    const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET);
+    return isRefreshTokenPayload(decoded) ? decoded : null;
   } catch {
     return null;
   }
@@ -72,7 +97,7 @@ export const verifyRefreshToken = (token: string): RefreshTokenPayload | null =>
  * Extrait le token du header Authorization
  */
 export const extractTokenFromHeader = (authHeader: string | undefined): string | null => {
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+  if (!authHeader?.startsWith("Bearer ")) {
     return null;
   }
   return authHeader.substring(7);

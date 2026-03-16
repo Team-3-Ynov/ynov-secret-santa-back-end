@@ -13,6 +13,12 @@ export default defineConfig({
       reporter: ["text", "lcov", "html"],
       include: ["src/**/*.ts"],
       exclude: ["src/**/*.d.ts", "src/index.ts", "src/scripts/**"],
+      thresholds: {
+        statements: 80,
+        branches: 80,
+        functions: 80,
+        lines: 80,
+      },
     },
   },
 });

@@ -31,26 +31,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Check coverage thresholds
-echo "Checking coverage thresholds..."
-if [ ! -f coverage/lcov.info ]; then
-  echo "Coverage report not found. Please run tests with coverage."
-  exit 1
-fi
-
-# Extract coverage percentages from the coverage summary
-STATEMENTS_COVERAGE=$(grep -A 10 "All files" coverage/index.html | grep -E "[0-9]+\.[0-9]+%" | head -1 | sed 's/[^0-9.]//g' | cut -d. -f1)
-BRANCHES_COVERAGE=$(grep -A 15 "All files" coverage/index.html | grep -E "[0-9]+\.[0-9]+%" | head -2 | tail -1 | sed 's/[^0-9.]//g' | cut -d. -f1)
-FUNCTIONS_COVERAGE=$(grep -A 20 "All files" coverage/index.html | grep -E "[0-9]+\.[0-9]+%" | head -3 | tail -1 | sed 's/[^0-9.]//g' | cut -d. -f1)
-LINES_COVERAGE=$(grep -A 25 "All files" coverage/index.html | grep -E "[0-9]+\.[0-9]+%" | head -4 | tail -1 | sed 's/[^0-9.]//g' | cut -d. -f1)
-
-# Check if coverage meets thresholds (80% for all metrics)
-if [ "$STATEMENTS_COVERAGE" -lt 80 ] || [ "$BRANCHES_COVERAGE" -lt 80 ] || [ "$FUNCTIONS_COVERAGE" -lt 80 ] || [ "$LINES_COVERAGE" -lt 80 ]; then
-  echo "Coverage thresholds not met. Please improve test coverage."
-  echo "Current coverage: Statements=$STATEMENTS_COVERAGE%, Branches=$BRANCHES_COVERAGE%, Functions=$FUNCTIONS_COVERAGE%, Lines=$LINES_COVERAGE%"
-  exit 1
-fi
-
-echo "Coverage thresholds met!"
+echo "Coverage thresholds checked by Vitest configuration."
 
 echo "All pre-commit checks passed!"

@@ -3,6 +3,7 @@ import "dotenv/config";
 
 // Mock des variables d'environnement pour les tests
 process.env.JWT_SECRET ??= "test-secret-key";
+process.env.REFRESH_TOKEN_SECRET ??= "test-refresh-secret-key";
 process.env.JWT_EXPIRES_IN ??= "1h";
 process.env.DB_HOST ??= "localhost";
 process.env.DB_PORT ??= "5432";

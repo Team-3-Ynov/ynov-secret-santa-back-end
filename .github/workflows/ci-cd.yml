@@ -96,20 +96,23 @@ jobs:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
 
-      - name: 🔍 SonarQube Scan
+      - name: 🔐 Check SonarQube secrets
+        id: sonar-secrets
         if: always()
         run: |
-          # Install SonarScanner
-          dotnet tool install --global dotnet-sonarscanner --version 6.2.0
-          export PATH="$PATH:$HOME/.dotnet/tools"
-          
-          # Run SonarScanner
-          sonar-scanner \
-            -Dsonar.projectKey=ynov-secret-santa-back-end \
-            -Dsonar.sources=src \
-            -Dsonar.host.url=${{ secrets.SONARQUBE_URL }} \
-            -Dsonar.login=${{ secrets.SONARQUBE_TOKEN }} \
-            -Dsonar.typescript.lcov.reportPaths=coverage/lcov.info
+          if [ -n "${{ secrets.SONARQUBE_URL }}" ] && [ -n "${{ secrets.SONARQUBE_TOKEN }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ SonarQube secrets missing, skipping SonarQube scan" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: 🔍 SonarQube Scan
+        if: always() && steps.sonar-secrets.outputs.enabled == 'true'
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONARQUBE_URL }}
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
 
       - name: 📋 Test Summary
         if: always()

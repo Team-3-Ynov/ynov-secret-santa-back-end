@@ -178,10 +178,21 @@ async function seedEvents(): Promise<void> {
 
   for (const event of events) {
     try {
+      const ownerResult = await pool.query<{ id: number }>(
+        "SELECT id FROM users WHERE email = $1",
+        [event.ownerEmail]
+      );
+      const ownerId = ownerResult.rows[0]?.id;
+
+      if (!ownerId) {
+        console.log(`  ⚠️  Owner ${event.ownerEmail} not found, skipping event ${event.title}`);
+        continue;
+      }
+
       // Vérifier si un événement similaire existe déjà
       const existing = await pool.query(
-        "SELECT id FROM events WHERE title = $1 AND owner_email = $2",
-        [event.title, event.ownerEmail]
+        "SELECT id FROM events WHERE title = $1 AND owner_id = $2",
+        [event.title, ownerId]
       );
 
       if (existing.rows.length > 0) {
@@ -192,16 +203,9 @@ async function seedEvents(): Promise<void> {
       const id = randomUUID();
 
       await pool.query(
-        `INSERT INTO events (id, title, description, event_date, budget, owner_email) 
+        `INSERT INTO events (id, title, description, event_date, budget, owner_id) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
-        [
-          id,
-          event.title,
-          event.description,
-          event.eventDate.toISOString(),
-          event.budget,
-          event.ownerEmail,
-        ]
+        [id, event.title, event.description, event.eventDate.toISOString(), event.budget, ownerId]
       );
 
       console.log(`  ✅ Created event: ${event.title}`);

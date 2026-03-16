@@ -142,6 +142,11 @@ export const AuthController = {
         return;
       }
 
+      if (payload.type !== "refresh") {
+        res.status(401).json({ success: false, message: "Type de token invalide" });
+        return;
+      }
+
       // 2. Vérifier si le token existe en base et n'est pas révoqué
       const storedToken = await RefreshTokenModel.findByToken(refreshToken);
       if (!storedToken || storedToken.revoked) {
@@ -157,6 +162,11 @@ export const AuthController = {
           success: false,
           message: "Refresh token invalide ou révoqué",
         });
+        return;
+      }
+
+      if (storedToken.user_id !== payload.userId) {
+        res.status(401).json({ success: false, message: "Refresh token invalide" });
         return;
       }
 

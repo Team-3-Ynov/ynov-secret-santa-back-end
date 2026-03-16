@@ -70,12 +70,12 @@ export const getUserStats = async (userId: number): Promise<UserStats> => {
     [userId, "accepted"]
   );
 
-  const row = result.rows[0] || {};
+  const row = result.rows[0];
 
   return {
-    eventsCreated: parseInt(row.events_created || "0", 10),
-    participations: parseInt(row.participations || "0", 10),
-    giftsOffered: parseInt(row.gifts_offered || "0", 10),
+    eventsCreated: Number.parseInt(row?.events_created ?? "0", 10),
+    participations: Number.parseInt(row?.participations ?? "0", 10),
+    giftsOffered: Number.parseInt(row?.gifts_offered ?? "0", 10),
   };
 };
 /**
