@@ -2,6 +2,8 @@ import { vi, type Mock } from 'vitest';
 import request from 'supertest';
 import app from '../../src/app';
 import * as eventService from '../../src/services/event.service';
+import * as notificationService from '../../src/services/notification.service';
+import { UserModel } from '../../src/models/user.model';
 
 // Mock du middleware authenticate pour bypasser la vérification JWT en tests
 vi.mock('../../src/middlewares/auth.middleware', () => ({
@@ -21,6 +23,12 @@ vi.mock('../../src/services/email.service', () => ({
 // Mock du service notification pour éviter les appels BDD
 vi.mock('../../src/services/notification.service', () => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../src/models/user.model', () => ({
+  UserModel: {
+    findByEmail: vi.fn(),
+  },
 }));
 
 // Mock de la couche service pour ne pas toucher la BDD
@@ -259,7 +267,18 @@ describe('DELETE /api/events/:id', () => {
 });
 
 describe('POST /api/events/:id/invite', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (UserModel.findByEmail as Mock).mockResolvedValue(null);
+  });
+
   it('should invite a user successfully', async () => {
+    (UserModel.findByEmail as Mock).mockResolvedValue({
+      id: 2,
+      email: 'guest@example.com',
+      username: 'guest-user',
+    });
+
     const res = await request(app)
       .post('/api/events/uuid-1/invite')
       .send({ email: 'guest@example.com' })
@@ -268,6 +287,8 @@ describe('POST /api/events/:id/invite', () => {
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty('id', 'invit-1');
     expect(res.body.email).toBe('guest@example.com');
+    expect(UserModel.findByEmail).toHaveBeenCalledWith('guest@example.com');
+    expect(notificationService.createNotification).toHaveBeenCalledTimes(1);
   });
 
   it('should return 400 if email is invalid', async () => {

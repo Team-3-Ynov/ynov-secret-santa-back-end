@@ -4,6 +4,7 @@ import { validateEventInput, updateEventSchema } from '../models/event.model';
 import { invitationSchema } from '../models/invitation.model';
 import { sendInvitationEmail, sendDrawResultEmail } from '../services/email.service';
 import { createNotification } from '../services/notification.service';
+import { UserModel } from '../models/user.model';
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
@@ -112,6 +113,7 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId } = req.params;
     const { email } = req.body;
+    const inviter = (req as any).user;
 
     const parsed = invitationSchema.safeParse({ email });
 
@@ -124,6 +126,23 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
     }
 
     const invitation = await createInvitation(eventId, parsed.data.email);
+
+    // Créer une notification in-app si l'utilisateur invité existe déjà.
+    const invitedUser = await UserModel.findByEmail(parsed.data.email);
+    if (invitedUser && invitedUser.id !== inviter?.id) {
+      const event = await findEventById(eventId);
+      await createNotification({
+        userId: invitedUser.id,
+        type: 'invitation',
+        title: `Invitation - ${event?.title || 'Secret Santa'}`,
+        message: `${inviter?.username || inviter?.email || 'Un organisateur'} vous a invité(e) à rejoindre un Secret Santa.`,
+        metadata: {
+          eventId,
+          invitationId: invitation.id,
+          invitedEmail: parsed.data.email,
+        },
+      });
+    }
 
     // Envoyer l'email
     // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre)
