@@ -12,12 +12,10 @@ describe("event.model validateEventInput", () => {
     const result = validateEventInput(payload);
 
     expect("data" in result).toBe(true);
-    if ("data" in result) {
-      expect(result.data.title).toBe("Noel 2026");
-      expect(result.data.description).toBe("Cadeaux et tirage");
-      expect(result.data.budget).toBe(30);
-      expect(result.data.eventDate).toBeInstanceOf(Date);
-    }
+    expect(result.data.title).toBe("Noel 2026");
+    expect(result.data.description).toBe("Cadeaux et tirage");
+    expect(result.data.budget).toBe(30);
+    expect(result.data.eventDate).toBeInstanceOf(Date);
   });
 
   it("should return errors for invalid date", () => {

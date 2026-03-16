@@ -5,9 +5,7 @@ describe("invitation.model schema", () => {
     const result = invitationSchema.safeParse({ email: "USER@MAIL.COM" });
 
     expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.email).toBe("user@mail.com");
-    }
+    expect(result.data.email).toBe("user@mail.com");
   });
 
   it("should reject email with surrounding spaces", () => {

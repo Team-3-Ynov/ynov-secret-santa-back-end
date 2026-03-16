@@ -1,5 +1,5 @@
-import type { NextFunction, Request, Response } from "express";
 import * as Sentry from "@sentry/node";
+import type { NextFunction, Request, Response } from "express";
 import { extractTokenFromHeader, verifyAccessToken } from "../utils/jwt.utils";
 
 // Extension de l'interface Request pour inclure les infos de l'utilisateur

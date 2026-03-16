@@ -81,7 +81,7 @@ app.get("/health", async (_, res) => {
       database: "connected",
       environment: process.env.NODE_ENV || "development",
     });
-  } catch (_error) {
+  } catch {
     res.status(503).json({
       status: "ERROR",
       timestamp: new Date().toISOString(),

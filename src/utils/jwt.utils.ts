@@ -52,7 +52,7 @@ export const signRefreshToken = (userId: number): string => {
 export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
   try {
     return jwt.verify(token, JWT_SECRET) as AccessTokenPayload;
-  } catch (_error) {
+  } catch {
     return null;
   }
 };
@@ -63,7 +63,7 @@ export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
 export const verifyRefreshToken = (token: string): RefreshTokenPayload | null => {
   try {
     return jwt.verify(token, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
-  } catch (_error) {
+  } catch {
     return null;
   }
 };
