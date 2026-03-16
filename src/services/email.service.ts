@@ -50,12 +50,9 @@ export const sendInvitationEmail = async (to: string, eventTitle: string, invite
                 console.warn('⚠️ [DEV MODE] Email non envoyé - See error above');
             }
             console.log(`[MOCK EMAIL] To: ${to}, Subject: Invitation Secret Santa, Link: ${inviteLink}`);
-            return; // On continue sans erreur en dev
         }
         throw error;
     }
-    throw error;
-  }
 };
 
 export const sendDrawResultEmail = async (
@@ -100,10 +97,7 @@ export const sendDrawResultEmail = async (
         if (isDev) {
             console.warn('⚠️ [DEV MODE] Email non envoyé - une erreur SMTP est survenue');
             console.log(`[MOCK EMAIL] Draw result - To: ${to}, Receiver: ${receiverUsername}`);
-            return;
         }
         throw error;
     }
-    throw error;
-  }
 };
