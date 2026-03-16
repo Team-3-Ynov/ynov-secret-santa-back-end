@@ -20,7 +20,8 @@
 		"lint:fix": "biome check --write .",
 		"format": "biome format --write .",
 		"docker:build": "docker build -f docker/Dockerfile -t secret-santa-backend .",
-		"docker:down": "docker compose down"
+		"docker:down": "docker compose down",
+		"prepare": "husky"
 	},
 	"keywords": [],
 	"author": "",
@@ -58,6 +59,7 @@
 		"@types/swagger-jsdoc": "^6.0.4",
 		"@types/swagger-ui-express": "^4.1.8",
 		"@vitest/coverage-v8": "^4.1.0",
+		"husky": "^9.1.7",
 		"nodemon": "^3.1.11",
 		"oxlint": "^1.56.0",
 		"supertest": "^7.1.4",

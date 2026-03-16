@@ -339,7 +339,9 @@ describe("EventService - Unified Dependency Injection Tests", () => {
         }) // exclusions - impossible to satisfy
         .mockResolvedValueOnce({ command: "ROLLBACK" });
 
-      await expect(performDraw("event-1", mockPool)).rejects.toThrow("Failed to perform draw");
+      await expect(performDraw("event-1", mockPool)).rejects.toThrow(
+        "Impossible de trouver une assignation valide avec les exclusions actuelles. Trop de contraintes."
+      );
       expect(mockClientQuery).toHaveBeenCalledWith("ROLLBACK");
     });
   });

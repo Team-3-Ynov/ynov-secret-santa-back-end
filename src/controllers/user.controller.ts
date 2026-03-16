@@ -14,7 +14,9 @@ import {
  */
 export const getPublicProfileHandler = async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.id, 10);
+    const id = req.params.id;
+    const idStr = Array.isArray(id) ? id[0] : id;
+    const userId = parseInt(idStr, 10);
 
     if (Number.isNaN(userId)) {
       return res.status(400).json({ success: false, message: "ID utilisateur invalide." });

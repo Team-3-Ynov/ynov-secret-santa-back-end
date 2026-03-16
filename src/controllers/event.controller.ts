@@ -61,7 +61,8 @@ export const getEventHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const event = await findEventById(id);
+    const eventId = Array.isArray(id) ? id[0] : id;
+    const event = await findEventById(eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -86,7 +87,8 @@ export const updateEventHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const event = await findEventById(id);
+    const eventId = Array.isArray(id) ? id[0] : id;
+    const event = await findEventById(eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -98,7 +100,7 @@ export const updateEventHandler = async (req: Request, res: Response) => {
       });
     }
 
-    const updatedEvent = await updateEvent(id, parsed.data);
+    const updatedEvent = await updateEvent(eventId, parsed.data);
     return res.status(200).json({ success: true, data: updatedEvent });
   } catch (error) {
     console.error(`Erreur lors de la mise à jour de l'événement ${id}:`, error);
@@ -118,7 +120,8 @@ export const deleteEventHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const event = await findEventById(id);
+    const eventId = Array.isArray(id) ? id[0] : id;
+    const event = await findEventById(eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -130,7 +133,7 @@ export const deleteEventHandler = async (req: Request, res: Response) => {
       });
     }
 
-    await deleteEvent(id);
+    await deleteEvent(eventId);
     return res.status(200).json({ success: true, message: "Événement supprimé avec succès." });
   } catch (error) {
     console.error(`Erreur lors de la suppression de l'événement ${id}:`, error);
@@ -156,7 +159,8 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
       return;
     }
 
-    const invitation = await createInvitation(eventId, parsed.data.email);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const invitation = await createInvitation(eventIdStr, parsed.data.email);
 
     // Envoyer l'email
     // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre)
@@ -176,7 +180,8 @@ export const joinEventHandler = async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).user.id;
     const email = (req as AuthenticatedRequest).user.email;
 
-    const result = await joinEvent(eventId, userId, email);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const result = await joinEvent(eventIdStr, userId, email);
 
     if (!result.success) {
       return res.status(400).json(result);
@@ -197,7 +202,8 @@ export const drawEventHandler = async (req: Request, res: Response) => {
     const userId = (req as AuthenticatedRequest).user.id;
 
     // Vérifier que c'est l'owner
-    const event = await findEventById(eventId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const event = await findEventById(eventIdStr);
     if (!event) {
       return res.status(404).json({ message: "Événement non trouvé." });
     }
@@ -208,7 +214,7 @@ export const drawEventHandler = async (req: Request, res: Response) => {
       });
     }
 
-    const { assignments, notifications } = await performDraw(eventId);
+    const { assignments, notifications } = await performDraw(eventIdStr);
 
     // Envoyer les notifications en BDD ET les emails en parallèle
     await Promise.allSettled(
@@ -245,7 +251,8 @@ export const getAssignmentHandler = async (req: Request, res: Response) => {
     const { id: eventId } = req.params;
     const userId = (req as AuthenticatedRequest).user.id;
 
-    const assignment = await getAssignment(eventId, userId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const assignment = await getAssignment(eventIdStr, userId);
 
     if (!assignment) {
       return res.status(404).json({
@@ -287,7 +294,8 @@ export const getEventParticipantsHandler = async (req: Request, res: Response) =
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const participants = await getEventParticipants(eventId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const participants = await getEventParticipants(eventIdStr);
     res.status(200).json({ success: true, data: participants });
   } catch (error) {
     console.error("Error fetching participants:", error);
@@ -305,7 +313,8 @@ export const getEventInvitationsHandler = async (req: Request, res: Response) =>
     }
 
     // Vérifier que l'événement existe
-    const event = await findEventById(eventId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const event = await findEventById(eventIdStr);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -318,7 +327,7 @@ export const getEventInvitationsHandler = async (req: Request, res: Response) =>
       });
     }
 
-    const invitations = await getEventInvitations(eventId);
+    const invitations = await getEventInvitations(eventIdStr);
     res.status(200).json({ success: true, data: invitations });
   } catch (error) {
     console.error("Error fetching invitations:", error);
@@ -336,7 +345,8 @@ export const deleteInvitationHandler = async (req: Request, res: Response) => {
     }
 
     // Vérifier que l'événement existe
-    const event = await findEventById(eventId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const event = await findEventById(eventIdStr);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -350,7 +360,8 @@ export const deleteInvitationHandler = async (req: Request, res: Response) => {
     }
 
     // Vérifier que l'invitation existe et appartient à cet événement
-    const invitation = await findInvitationById(invitationId);
+    const invitationIdStr = Array.isArray(invitationId) ? invitationId[0] : invitationId;
+    const invitation = await findInvitationById(invitationIdStr);
     if (!invitation || invitation.event_id !== eventId) {
       return res.status(404).json({ success: false, message: "Invitation non trouvée." });
     }
@@ -363,7 +374,7 @@ export const deleteInvitationHandler = async (req: Request, res: Response) => {
       });
     }
 
-    await deleteInvitation(invitationId);
+    await deleteInvitation(invitationIdStr);
     res.status(200).json({ success: true, message: "Invitation annulée avec succès." });
   } catch (error) {
     console.error("Error deleting invitation:", error);
@@ -381,7 +392,8 @@ export const addExclusionHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const event = await findEventById(eventId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const event = await findEventById(eventIdStr);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -393,8 +405,8 @@ export const addExclusionHandler = async (req: Request, res: Response) => {
       });
     }
 
-    await addExclusion(eventId, giverId, receiverId);
-    const allExclusions = await getEventExclusions(eventId);
+    await addExclusion(eventIdStr, giverId, receiverId);
+    const allExclusions = await getEventExclusions(eventIdStr);
     return res.status(201).json({ success: true, data: allExclusions });
   } catch (error: unknown) {
     console.error("Erreur lors de l'ajout de l'exclusion:", error);
@@ -437,7 +449,8 @@ export const getEventExclusionsHandler = async (req: Request, res: Response) => 
   }
 
   try {
-    const event = await findEventById(eventId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const event = await findEventById(eventIdStr);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -449,7 +462,7 @@ export const getEventExclusionsHandler = async (req: Request, res: Response) => 
       });
     }
 
-    const exclusions = await getEventExclusions(eventId);
+    const exclusions = await getEventExclusions(eventIdStr);
     return res.status(200).json({ success: true, data: exclusions });
   } catch (error) {
     console.error("Erreur lors de la récupération des exclusions:", error);
@@ -469,7 +482,8 @@ export const deleteExclusionHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const event = await findEventById(eventId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const event = await findEventById(eventIdStr);
     if (!event) {
       return res.status(404).json({ success: false, message: "Événement non trouvé." });
     }
@@ -481,7 +495,8 @@ export const deleteExclusionHandler = async (req: Request, res: Response) => {
       });
     }
 
-    const success = await deleteExclusion(eventId, parseInt(exclusionId, 10));
+    const exclusionIdStr = Array.isArray(exclusionId) ? exclusionId[0] : exclusionId;
+    const success = await deleteExclusion(eventIdStr, parseInt(exclusionIdStr, 10));
     if (!success) {
       return res.status(404).json({ success: false, message: "Exclusion non trouvée." });
     }

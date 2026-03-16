@@ -68,7 +68,8 @@ export const markAsReadHandler = async (req: Request, res: Response) => {
   }
 
   try {
-    const notification = await markNotificationAsRead(id, userId);
+    const idStr = Array.isArray(id) ? id[0] : id;
+    const notification = await markNotificationAsRead(idStr, userId);
 
     if (!notification) {
       return res.status(404).json({ success: false, message: "Notification non trouvée." });

@@ -1,0 +1,25 @@
+echo "Running pre-commit checks for backend..."
+
+# Run linting
+pnpm lint
+if [ $? -ne 0 ]; then
+  echo "Linting failed. Fix linting errors before committing."
+  exit 1
+fi
+
+# Run typecheck
+pnpm typecheck
+if [ $? -ne 0 ]; then
+  echo "Typecheck failed. Fix type errors before committing."
+  exit 1
+fi
+
+# Run tests
+echo "Running tests..."
+pnpm test
+if [ $? -ne 0 ]; then
+  echo "Tests failed. Fix tests before committing."
+  exit 1
+fi
+
+echo "All pre-commit checks passed!"
