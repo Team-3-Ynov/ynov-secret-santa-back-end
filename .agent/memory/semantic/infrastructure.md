@@ -6,6 +6,23 @@
 - [Database](#database) - postgres, migrations
 - [Email And Docs](#email-and-docs) - mailhog, swagger
 
+## Activation Matrix
+
+- Context: Runtime
+- Roles: `backend-engineer.md`
+- Tier 1 Skills: `06-testing.md`, `05-api-standards.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/system/orchestrator.md`
+
+- Context: Database
+- Roles: `backend-engineer.md`, `api-security-reviewer.md`
+- Tier 1 Skills: `04-database.md`, `03-security.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/system/auto-learning.md`
+
+- Context: Email And Docs
+- Roles: `backend-engineer.md`
+- Tier 1 Skills: `05-api-standards.md`, `03-security.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/rules/tier-0/11-agent-behavior.md`
+
 ## <section id="runtime"> Runtime
 
 - Node.js 20+ runtime.
