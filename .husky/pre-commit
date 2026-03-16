@@ -1,5 +1,21 @@
 echo "Running pre-commit checks for backend..."
 
+# Generate OpenAPI spec
+echo "Generating OpenAPI specification..."
+pnpm run generate:openapi
+if [ $? -ne 0 ]; then
+  echo "OpenAPI generation failed."
+  exit 1
+fi
+
+# Validate OpenAPI spec
+echo "Validating OpenAPI specification..."
+pnpm run validate:openapi
+if [ $? -ne 0 ]; then
+  echo "OpenAPI validation failed. Fix specification errors before committing."
+  exit 1
+fi
+
 # Run lint-staged
 npx lint-staged
 if [ $? -ne 0 ]; then

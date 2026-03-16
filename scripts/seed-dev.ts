@@ -166,7 +166,7 @@ async function seedUsers(): Promise<void> {
 
       console.log(`  ✅ Created user: ${user.email}`);
     } catch (error) {
-      console.error(`  ❌ Error creating user ${user.email}:`, error);
+      console.error("  ❌ Error creating user:", user.email, error);
     }
   }
 }
@@ -206,7 +206,7 @@ async function seedEvents(): Promise<void> {
 
       console.log(`  ✅ Created event: ${event.title}`);
     } catch (error) {
-      console.error(`  ❌ Error creating event "${event.title}":`, error);
+      console.error("  ❌ Error creating event:", event.title, error);
     }
   }
 }

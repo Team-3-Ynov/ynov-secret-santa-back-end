@@ -69,7 +69,7 @@ export const getEventHandler = async (req: Request, res: Response) => {
 
     return res.status(200).json({ success: true, data: event });
   } catch (error) {
-    console.error(`Erreur lors de la récupération de l'événement ${id}:`, error);
+    console.error("Erreur lors de la récupération de l'événement:", id, error);
     return res.status(500).json({
       success: false,
       message: "Impossible de récupérer l'événement.",
@@ -103,7 +103,7 @@ export const updateEventHandler = async (req: Request, res: Response) => {
     const updatedEvent = await updateEvent(eventId, parsed.data);
     return res.status(200).json({ success: true, data: updatedEvent });
   } catch (error) {
-    console.error(`Erreur lors de la mise à jour de l'événement ${id}:`, error);
+    console.error("Erreur lors de la mise à jour de l'événement:", id, error);
     return res.status(500).json({
       success: false,
       message: "Impossible de mettre à jour l'événement.",
@@ -136,7 +136,7 @@ export const deleteEventHandler = async (req: Request, res: Response) => {
     await deleteEvent(eventId);
     return res.status(200).json({ success: true, message: "Événement supprimé avec succès." });
   } catch (error) {
-    console.error(`Erreur lors de la suppression de l'événement ${id}:`, error);
+    console.error("Erreur lors de la suppression de l'événement:", id, error);
     return res.status(500).json({
       success: false,
       message: "Impossible de supprimer l'événement.",

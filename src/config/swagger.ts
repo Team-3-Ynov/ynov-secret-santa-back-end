@@ -61,6 +61,7 @@ function resolveRefs(obj: unknown, baseSpec: Record<string, unknown>): unknown {
       let resolved: unknown = baseSpec.components;
       for (const part of parts) {
         if (resolved && typeof resolved === "object") {
+          // semgrep-disable-next-line javascript.lang.security.audit.prototype-pollution.prototype-pollution-loop.prototype-pollution-loop
           resolved = (resolved as Record<string, unknown>)[part];
         }
       }

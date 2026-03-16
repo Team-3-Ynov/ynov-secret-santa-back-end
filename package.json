@@ -21,7 +21,9 @@
 		"format": "biome format --write .",
 		"docker:build": "docker build -f docker/Dockerfile -t secret-santa-backend .",
 		"docker:down": "docker compose down",
-		"prepare": "husky"
+		"prepare": "husky",
+		"generate:openapi": "tsx scripts/generate-openapi.ts",
+		"validate:openapi": "spectral lint src/docs/openapi.yaml"
 	},
 	"keywords": [],
 	"author": "",
@@ -45,6 +47,14 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.4.7",
+		"@stoplight/spectral-cli": "^6.15.0",
+		"@stoplight/spectral-core": "^1.21.0",
+		"@stoplight/spectral-formats": "^1.8.2",
+		"@stoplight/spectral-functions": "^1.10.1",
+		"@stoplight/spectral-parsers": "^1.0.5",
+		"@stoplight/spectral-ref-resolver": "^1.0.5",
+		"@stoplight/spectral-ruleset-bundler": "^1.6.3",
+		"@stoplight/spectral-rulesets": "^1.22.0",
 		"@types/bcrypt": "^6.0.0",
 		"@types/cors": "^2.8.19",
 		"@types/express": "^5.0.6",
@@ -60,13 +70,16 @@
 		"@types/swagger-ui-express": "^4.1.8",
 		"@vitest/coverage-v8": "^4.1.0",
 		"c8": "^11.0.0",
+		"glob": "^13.0.6",
 		"husky": "^9.1.7",
 		"lint-staged": "^16.4.0",
 		"nodemon": "^3.1.14",
 		"oxlint": "^1.56.0",
 		"supertest": "^7.1.4",
 		"ts-node": "^10.9.2",
+		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
-		"vitest": "^4.1.0"
+		"vitest": "^4.1.0",
+		"yaml": "^2.8.2"
 	}
 }
