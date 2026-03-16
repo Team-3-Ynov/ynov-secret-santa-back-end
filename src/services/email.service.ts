@@ -87,10 +87,15 @@ export const sendDrawResultEmail = async (
     try {
         const info = await transporter.sendMail(mailOptions);
         console.log('📧 Email de tirage envoyé: %s', info.messageId);
-    } catch (error) {
+    } catch (error: any) {
         console.error('❌ Erreur lors de l\'envoi de l\'email de tirage:', error);
+        if (isDev && error && error.code === 'ECONNREFUSED') {
+            console.warn('⚠️ [DEV MODE] Email non envoyé - connexion SMTP refusée (MailHog probablement non démarré)');
+            console.log(`[MOCK EMAIL] Draw result - To: ${to}, Receiver: ${receiverUsername}`);
+            return;
+        }
         if (isDev) {
-            console.warn('⚠️ [DEV MODE] Email non envoyé - MailHog probablement non démarré');
+            console.warn('⚠️ [DEV MODE] Email non envoyé - une erreur SMTP est survenue');
             console.log(`[MOCK EMAIL] Draw result - To: ${to}, Receiver: ${receiverUsername}`);
             return;
         }
