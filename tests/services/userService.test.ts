@@ -3,6 +3,7 @@ import { pool } from "../../src/config/database";
 import { UserModel } from "../../src/models/user.model";
 import {
   getPublicUserProfile,
+  getPublicUserProfiles,
   getUserStats,
   updateUserPassword,
   updateUserProfile,
@@ -51,6 +52,30 @@ describe("UserService", () => {
         [1]
       );
       expect(result).toEqual(mockUser);
+    });
+  });
+
+  describe("getPublicUserProfiles", () => {
+    it("should return empty array when userIds is empty", async () => {
+      const result = await getPublicUserProfiles([]);
+
+      expect(result).toEqual([]);
+      expect(mockPool.query).not.toHaveBeenCalled();
+    });
+
+    it("should return public profiles for provided userIds", async () => {
+      const rows = [
+        { id: 1, username: "u1", created_at: new Date() },
+        { id: 2, username: "u2", created_at: new Date() },
+      ];
+      mockPool.query.mockResolvedValueOnce({ rows });
+
+      const result = await getPublicUserProfiles([1, 2]);
+
+      expect(mockPool.query).toHaveBeenCalledWith(expect.stringContaining("WHERE id = ANY($1)"), [
+        [1, 2],
+      ]);
+      expect(result).toEqual(rows);
     });
   });
 

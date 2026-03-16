@@ -113,8 +113,10 @@ Active roles for this repository:
 
 - `backend-engineer.md`
 - `api-security-reviewer.md`
+- `backend-unit-test-engineer.md`
 
 Use both roles for auth, token, permission, validation or data exposure topics.
+Use `backend-unit-test-engineer.md` for unit tests, test regressions and mocking strategy.
 
 ## 🧭 Task Detection Table
 

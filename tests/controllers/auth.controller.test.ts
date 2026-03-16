@@ -253,39 +253,6 @@ describe("AuthController", () => {
       });
     });
 
-    it("should return 401 if not authenticated", async () => {
-      // In strict mode, getMe expects req.user to be present (ensured by middleware)
-      // But if somehow called without it (or if middleware fails), typescript issues might occur
-      // Here we simulate the case where req.user is undefined, but practically the middleware blocks this.
-      // However, if we test getMe in isolation:
-      mockRequest = { ...mockRequest, user: undefined } as any;
-
-      // Note: The current controller implementation assumes req.user EXISTS because of the cast.
-      // (req as AuthenticatedRequest).user.id will throw if user is undefined.
-      // The controller should probably check for user existence or rely on middleware.
-      // Let's see the controller code: 'const userId = (req as AuthenticatedRequest).user.id;'
-      // This throws if user is undefined.
-      // We should probably safeguard the controller OR ensure the test provides a mock that doesn't crash but maybe has invalid ID?
-      // Actually, if the middleware does its job, the controller is fine.
-      // But for the sake of the test mocking "Not Authenticated" hitting the controller directly:
-      // constructing a case where it throws or handles it.
-
-      // Since the controller crashes on property access if user is undefined, let's fix the controller to be safer OR update validation in test.
-      // For now, let's catch the error or expect 500 if we didn't add safeguard.
-      // BUT, looking at the previous failures, it returned 500 when it crashed.
-
-      // Let's simply update the test to expect 500 for this crash, OR (better)
-      // mocking a case where user is present but invalid?
-      // Wait, the test says "should return 401 if not authenticated".
-      // This logic is usually in the MIDDLEWARE, not the controller.
-      // The controller `getMe` just gets the ID.
-      // So this test case might be redundant for the controller, or should test the MIDDLEWARE.
-      // Assuming we keep the test, let's just skip/remove it because logic is in middleware now.
-    });
-
-    // Removing the "should return 401" test because authentication is handled by middleware
-    // and the controller strictly expects a user.
-
     it("should return 404 if user not found", async () => {
       mockRequest = {
         ...mockRequest,
@@ -300,6 +267,169 @@ describe("AuthController", () => {
         success: false,
         message: "Utilisateur non trouvé",
       });
+    });
+
+    it("should return 500 when getMe throws unexpectedly", async () => {
+      mockRequest = {
+        ...mockRequest,
+        user: { id: 1, email: "test@example.com" },
+      } as any;
+      (UserModel.findById as Mock).mockRejectedValue(new Error("DB Error"));
+
+      await AuthController.getMe(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+      expect(jsonMock).toHaveBeenCalledWith({ success: false, message: "Erreur serveur" });
+    });
+  });
+
+  describe("refresh", () => {
+    it("should return 400 when refresh token is missing", async () => {
+      mockRequest.body = {};
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(400);
+    });
+
+    it("should return 401 when refresh token signature is invalid", async () => {
+      mockRequest.body = { refreshToken: "bad-token" };
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue(null);
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({ success: false, message: "Refresh token invalide" });
+    });
+
+    it("should return 401 when refresh token is not found in DB", async () => {
+      mockRequest.body = { refreshToken: "token" };
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1 });
+      (RefreshTokenModel.findByToken as Mock).mockResolvedValue(null);
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: false,
+        message: "Refresh token invalide ou révoqué",
+      });
+    });
+
+    it("should revoke all tokens when reused revoked token is detected", async () => {
+      mockRequest.body = { refreshToken: "revoked-token" };
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 3 });
+      (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
+        token: "revoked-token",
+        revoked: true,
+        expires_at: new Date(Date.now() + 60_000),
+      });
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(RefreshTokenModel.revokeAllForUser).toHaveBeenCalledWith(3);
+      expect(statusMock).toHaveBeenCalledWith(401);
+    });
+
+    it("should return 401 when token is expired", async () => {
+      mockRequest.body = { refreshToken: "expired-token" };
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1 });
+      (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
+        token: "expired-token",
+        revoked: false,
+        expires_at: new Date(Date.now() - 1_000),
+      });
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(401);
+      expect(jsonMock).toHaveBeenCalledWith({ success: false, message: "Refresh token expiré" });
+    });
+
+    it("should return 404 when user from refresh token no longer exists", async () => {
+      mockRequest.body = { refreshToken: "valid-token" };
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 99 });
+      (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
+        token: "valid-token",
+        revoked: false,
+        expires_at: new Date(Date.now() + 60_000),
+      });
+      (UserModel.findById as Mock).mockResolvedValue(null);
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(404);
+    });
+
+    it("should rotate tokens and return 200 when refresh is valid", async () => {
+      mockRequest.body = { refreshToken: "valid-token" };
+      const user = { id: 1, email: "ok@example.com", username: "ok" };
+
+      (jwtUtils.verifyRefreshToken as Mock).mockReturnValue({ userId: 1 });
+      (RefreshTokenModel.findByToken as Mock).mockResolvedValue({
+        token: "valid-token",
+        revoked: false,
+        expires_at: new Date(Date.now() + 60_000),
+      });
+      (UserModel.findById as Mock).mockResolvedValue(user);
+      (jwtUtils.signAccessToken as Mock).mockReturnValue("new-access");
+      (jwtUtils.signRefreshToken as Mock).mockReturnValue("new-refresh");
+      (RefreshTokenModel.revoke as Mock).mockResolvedValue(undefined);
+      (RefreshTokenModel.create as Mock).mockResolvedValue({ token: "new-refresh" });
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(RefreshTokenModel.revoke).toHaveBeenCalledWith("valid-token");
+      expect(RefreshTokenModel.create).toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(200);
+      expect(jsonMock).toHaveBeenCalledWith({
+        success: true,
+        data: {
+          accessToken: "new-access",
+          refreshToken: "new-refresh",
+        },
+      });
+    });
+
+    it("should return 500 when refresh throws unexpectedly", async () => {
+      mockRequest.body = { refreshToken: "token" };
+      (jwtUtils.verifyRefreshToken as Mock).mockImplementation(() => {
+        throw new Error("unexpected");
+      });
+
+      await AuthController.refresh(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("logout", () => {
+    it("should return 200 even without refresh token", async () => {
+      mockRequest.body = {};
+
+      await AuthController.logout(mockRequest as Request, mockResponse as Response);
+
+      expect(RefreshTokenModel.revoke).not.toHaveBeenCalled();
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should revoke token and return 200 when refresh token is provided", async () => {
+      mockRequest.body = { refreshToken: "to-revoke" };
+      (RefreshTokenModel.revoke as Mock).mockResolvedValue(undefined);
+
+      await AuthController.logout(mockRequest as Request, mockResponse as Response);
+
+      expect(RefreshTokenModel.revoke).toHaveBeenCalledWith("to-revoke");
+      expect(statusMock).toHaveBeenCalledWith(200);
+    });
+
+    it("should return 500 when logout throws unexpectedly", async () => {
+      mockRequest.body = { refreshToken: "to-revoke" };
+      (RefreshTokenModel.revoke as Mock).mockRejectedValue(new Error("boom"));
+
+      await AuthController.logout(mockRequest as Request, mockResponse as Response);
+
+      expect(statusMock).toHaveBeenCalledWith(500);
     });
   });
 });
