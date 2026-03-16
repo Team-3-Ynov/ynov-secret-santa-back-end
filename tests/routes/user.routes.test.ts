@@ -1,8 +1,11 @@
+import { vi, type Mock } from 'vitest';
 import request from 'supertest';
 import app from '../../src/app';
+import * as userService from '../../src/services/user.service';
+import { UserModel } from '../../src/models/user.model';
 
 // Mock du middleware authenticate
-jest.mock('../../src/middlewares/auth.middleware', () => ({
+vi.mock('../../src/middlewares/auth.middleware', () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.user = { id: 1, email: 'test@example.com' };
     next();
@@ -10,21 +13,18 @@ jest.mock('../../src/middlewares/auth.middleware', () => ({
 }));
 
 // Mock du modèle user (utilisé par getMeHandler)
-jest.mock('../../src/models/user.model', () => ({
+vi.mock('../../src/models/user.model', () => ({
   UserModel: {
-    findById: jest.fn(),
+    findById: vi.fn(),
   },
 }));
 
 // Mock du service user
-jest.mock('../../src/services/user.service', () => ({
-  getPublicUserProfile: jest.fn(),
-  updateUserProfile: jest.fn(),
-  updateUserPassword: jest.fn(),
+vi.mock('../../src/services/user.service', () => ({
+  getPublicUserProfile: vi.fn(),
+  updateUserProfile: vi.fn(),
+  updateUserPassword: vi.fn(),
 }));
-
-const userService = require('../../src/services/user.service');
-const { UserModel } = require('../../src/models/user.model');
 
 // ─── Données de test ─────────────────────────────────────────────────────────
 
@@ -45,10 +45,10 @@ const mockPublicProfile = {
 // ─── GET /api/users/me ────────────────────────────────────────────────────────
 
 describe('GET /api/users/me', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('should return the authenticated user profile', async () => {
-    (UserModel.findById as jest.Mock).mockResolvedValue(mockMe);
+    (UserModel.findById as Mock).mockResolvedValue(mockMe);
 
     const res = await request(app)
       .get('/api/users/me')
@@ -62,7 +62,7 @@ describe('GET /api/users/me', () => {
   });
 
   it('should return 404 if user not found in DB', async () => {
-    (UserModel.findById as jest.Mock).mockResolvedValue(null);
+    (UserModel.findById as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .get('/api/users/me')
@@ -74,7 +74,7 @@ describe('GET /api/users/me', () => {
   });
 
   it('should return 500 on unexpected error', async () => {
-    (UserModel.findById as jest.Mock).mockRejectedValue(new Error('DB Error'));
+    (UserModel.findById as Mock).mockRejectedValue(new Error('DB Error'));
 
     const res = await request(app)
       .get('/api/users/me')
@@ -88,11 +88,11 @@ describe('GET /api/users/me', () => {
 // ─── PUT /api/users/me ────────────────────────────────────────────────────────
 
 describe('PUT /api/users/me', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('should update the profile successfully with a new username', async () => {
     const updatedUser = { ...mockMe, username: 'new_username' };
-    (userService.updateUserProfile as jest.Mock).mockResolvedValue({
+    (userService.updateUserProfile as Mock).mockResolvedValue({
       success: true,
       user: updatedUser,
     });
@@ -110,7 +110,7 @@ describe('PUT /api/users/me', () => {
 
   it('should update the profile successfully with a new email', async () => {
     const updatedUser = { ...mockMe, email: 'new@example.com' };
-    (userService.updateUserProfile as jest.Mock).mockResolvedValue({
+    (userService.updateUserProfile as Mock).mockResolvedValue({
       success: true,
       user: updatedUser,
     });
@@ -125,7 +125,7 @@ describe('PUT /api/users/me', () => {
   });
 
   it('should return 400 if email is already taken', async () => {
-    (userService.updateUserProfile as jest.Mock).mockResolvedValue({
+    (userService.updateUserProfile as Mock).mockResolvedValue({
       success: false,
       error: 'Cet email est déjà utilisé par un autre compte',
     });
@@ -140,7 +140,7 @@ describe('PUT /api/users/me', () => {
   });
 
   it('should return 400 if username is already taken', async () => {
-    (userService.updateUserProfile as jest.Mock).mockResolvedValue({
+    (userService.updateUserProfile as Mock).mockResolvedValue({
       success: false,
       error: 'Ce nom d\'utilisateur est déjà pris',
     });
@@ -191,7 +191,7 @@ describe('PUT /api/users/me', () => {
   });
 
   it('should return 500 on unexpected error', async () => {
-    (userService.updateUserProfile as jest.Mock).mockRejectedValue(new Error('DB Error'));
+    (userService.updateUserProfile as Mock).mockRejectedValue(new Error('DB Error'));
 
     const res = await request(app)
       .put('/api/users/me')
@@ -205,7 +205,7 @@ describe('PUT /api/users/me', () => {
 // ─── PUT /api/users/me/password ───────────────────────────────────────────────
 
 describe('PUT /api/users/me/password', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   const validPayload = {
     currentPassword: 'OldPassword1',
@@ -213,7 +213,7 @@ describe('PUT /api/users/me/password', () => {
   };
 
   it('should update the password successfully', async () => {
-    (userService.updateUserPassword as jest.Mock).mockResolvedValue({ success: true });
+    (userService.updateUserPassword as Mock).mockResolvedValue({ success: true });
 
     const res = await request(app)
       .put('/api/users/me/password')
@@ -230,7 +230,7 @@ describe('PUT /api/users/me/password', () => {
   });
 
   it('should return 400 if current password is incorrect', async () => {
-    (userService.updateUserPassword as jest.Mock).mockResolvedValue({
+    (userService.updateUserPassword as Mock).mockResolvedValue({
       success: false,
       error: 'Mot de passe actuel incorrect',
     });
@@ -299,7 +299,7 @@ describe('PUT /api/users/me/password', () => {
   });
 
   it('should return 500 on unexpected error', async () => {
-    (userService.updateUserPassword as jest.Mock).mockRejectedValue(new Error('DB Error'));
+    (userService.updateUserPassword as Mock).mockRejectedValue(new Error('DB Error'));
 
     const res = await request(app)
       .put('/api/users/me/password')
@@ -313,10 +313,10 @@ describe('PUT /api/users/me/password', () => {
 // ─── GET /api/users/:id ───────────────────────────────────────────────────────
 
 describe('GET /api/users/:id', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => vi.clearAllMocks());
 
   it('should return public user profile', async () => {
-    (userService.getPublicUserProfile as jest.Mock).mockResolvedValue(mockPublicProfile);
+    (userService.getPublicUserProfile as Mock).mockResolvedValue(mockPublicProfile);
 
     const res = await request(app)
       .get('/api/users/2')
@@ -331,7 +331,7 @@ describe('GET /api/users/:id', () => {
   });
 
   it('should return 404 if user not found', async () => {
-    (userService.getPublicUserProfile as jest.Mock).mockResolvedValue(null);
+    (userService.getPublicUserProfile as Mock).mockResolvedValue(null);
 
     const res = await request(app)
       .get('/api/users/999')
@@ -351,7 +351,7 @@ describe('GET /api/users/:id', () => {
   });
 
   it('should return 500 on unexpected error', async () => {
-    (userService.getPublicUserProfile as jest.Mock).mockRejectedValue(new Error('DB Error'));
+    (userService.getPublicUserProfile as Mock).mockRejectedValue(new Error('DB Error'));
 
     const res = await request(app)
       .get('/api/users/2')

@@ -6,6 +6,7 @@ API Backend pour Secret Santa.
 
 - [Technologies](#-technologies)
 - [Prérequis](#-prérequis)
+- [Démarrage rapide](#-démarrage-rapide)
 - [Installation](#-installation)
 - [Configuration](#-configuration)
 - [Commandes disponibles](#-commandes-disponibles)
@@ -13,6 +14,7 @@ API Backend pour Secret Santa.
 - [Endpoints](#-endpoints)
 - [Tests](#-tests)
 - [Structure du projet](#-structure-du-projet)
+- [Dépannage rapide](#-dépannage-rapide)
 
 ## 🛠 Technologies
 
@@ -31,7 +33,31 @@ API Backend pour Secret Santa.
 
 - [Node.js](https://nodejs.org/) >= 20
 - [pnpm](https://pnpm.io/) (gestionnaire de paquets)
-- [Docker](https://www.docker.com/) (pour PostgreSQL)
+- [Docker Desktop](https://www.docker.com/) (et daemon démarré)
+
+## ⚡ Démarrage rapide
+
+### Option A — Recommandée (Full Docker)
+
+```bash
+docker compose --profile all up -d --build
+```
+
+- API: `http://localhost/api` (via Nginx)
+- Swagger: `http://localhost/api-docs`
+- MailHog: `http://localhost:8025`
+
+### Option B — Backend local (Node en dehors de Docker)
+
+```bash
+docker compose --profile infra up -d
+pnpm migrate
+pnpm dev
+```
+
+- API: `http://localhost:<PORT>/api`
+- Swagger: `http://localhost:<PORT>/api-docs`
+- MailHog: `http://localhost:8025`
 
 ## 🚀 Installation
 
@@ -50,47 +76,46 @@ pnpm install
 
 ### 3. Configurer les variables d'environnement
 
-Créez un fichier `.env` à la racine du projet :
-
-```env
-# Env
-NODE_ENV=development
-
-# Configuration du serveur
-PORT=3001
-
-# Configuration de la base de données PostgreSQL
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=secret_santa
-DB_USER=postgres
-DB_PASSWORD=postgres
-
-# Configuration JWT
-JWT_SECRET=your-super-secret-key-change-this-in-production
-JWT_EXPIRES_IN=7d
-
-# SMTP / MailHog (développement)
-SMTP_HOST=localhost
-SMTP_PORT=1025
-SMTP_USER=test
-SMTP_PASS=test
-
-# URL du frontend (pour les liens dans les emails)
-FRONTEND_URL=http://localhost:3000
-
-# Mapping postgres port on docker
-POSTGRES_PORT_MAPPING=5432:5432
-```
-
-### 4. Démarrer les services de développement (PostgreSQL + MailHog)
+Copiez l'exemple fourni puis adaptez les valeurs:
 
 ```bash
-# Pour le développement (PostgreSQL + MailHog uniquement)
+cp .env.example .env
+```
+
+Variables importantes à vérifier dans `.env`:
+
+```env
+PORT=3000
+DB_PASSWORD=your_secure_password_here
+JWT_SECRET=your_jwt_secret_here_min_32_characters
+CORS_ORIGIN=http://localhost:3000
+```
+
+> Si ton front appelle `http://localhost:3001`, ajuste `PORT` et `CORS_ORIGIN` en conséquence.
+
+### 4. Démarrer les services (recommandé : stack complète Docker)
+
+```bash
+# Recommandé : lance Frontend + Backend + PostgreSQL + MailHog + Nginx
+docker compose --profile all up -d --build
+```
+
+> Le profil `all` inclut aussi le frontend via `docker-compose.yml` (directive `include`).
+
+Alternative pour dev backend local (Node lancé hors Docker) :
+
+```bash
+# Infrastructure uniquement (PostgreSQL + MailHog)
 docker compose --profile infra up -d
 ```
 
-Cela démarre :
+Le profil `all` démarre notamment :
+
+- **Backend API** (via Docker)
+- **PostgreSQL** sur le port `5432` (base de données)
+- **MailHog** sur le port `1025` (SMTP) et `8025` (interface web)
+
+Le profil `infra` démarre uniquement :
 
 - **PostgreSQL** sur le port `5432` (base de données)
 - **MailHog** sur le port `1025` (SMTP) et `8025` (interface web)
@@ -99,19 +124,19 @@ Cela démarre :
 
 > 💡 Accédez à <http://localhost:8025> pour voir les emails envoyés en développement.
 
-### 5. Appliquer les migrations
+### 5. Appliquer les migrations (si backend local)
 
 ```bash
 pnpm migrate
 ```
 
-### 6. Lancer le serveur backend
+### 6. Lancer le serveur backend (si backend local)
 
 ```bash
 pnpm dev
 ```
 
-Le serveur démarre sur <http://localhost:3001>
+Le serveur démarre sur <http://localhost:3000> (ou la valeur de `PORT`).
 
 ### Commandes Docker utiles
 
@@ -119,8 +144,11 @@ Le serveur démarre sur <http://localhost:3001>
 # Démarrer uniquement l'infrastructure (DB + MailHog)
 docker compose --profile infra up -d
 
-# Démarrer tout la stack (Infra + Backend + Nginx)
-docker compose --profile all up -d
+# Démarrer toute la stack (recommandé)
+docker compose --profile all up -d --build
+
+# Redémarrer toute la stack
+docker compose --profile all restart
 
 # Arrêter tous les services
 docker compose --profile all down
@@ -138,7 +166,7 @@ docker compose restart postgres
 
 | Variable | Description | Valeur par défaut |
 |----------|-------------|-------------------|
-| `PORT` | Port du serveur | `3001` |
+| `PORT` | Port du serveur | `3000` |
 | `DB_HOST` | Hôte PostgreSQL | `localhost` |
 | `DB_PORT` | Port PostgreSQL | `5432` |
 | `DB_NAME` | Nom de la base | `secret_santa` |
@@ -169,13 +197,15 @@ docker compose restart postgres
 
 La documentation Swagger est disponible à l'adresse :
 
-**<http://localhost:3001/api-docs>**
+- Mode Docker `all` : **<http://localhost/api-docs>**
+- Mode backend local : **<http://localhost:3000/api-docs>** (ou ton `PORT`)
 
 > 💡 MailHog (visualisation des emails) : **<http://localhost:8025>**
 
 Vous pouvez également récupérer la spécification OpenAPI au format JSON :
 
-**<http://localhost:3001/api-docs.json>**
+- Mode Docker `all` : **<http://localhost/api-docs.json>**
+- Mode backend local : **<http://localhost:3000/api-docs.json>** (ou ton `PORT`)
 
 ## 🔗 Endpoints
 
@@ -363,27 +393,27 @@ database/
 
 ## 🐳 Docker
 
-### Démarrer PostgreSQL
+### Démarrer les services
 
 ```bash
 # Infrastructure uniquement
 docker compose --profile infra up -d
 
-# Full Stack (avec Backend et Nginx)
-docker compose --profile all up -d
+# Full Stack (Frontend + Backend + Infra)
+docker compose --profile all up -d --build
 ```
 
-### Arrêter PostgreSQL
+### Arrêter les services
 
 ```bash
-docker-compose down
+docker compose --profile all down
 ```
 
 ### Réinitialiser la base de données
 
 ```bash
-docker-compose down -v
-docker-compose up -d
+docker compose --profile infra down -v
+docker compose --profile infra up -d
 pnpm migrate
 ```
 
@@ -418,5 +448,13 @@ npx ts-node scripts/send-test-email.ts
 ```
 
 L'email apparaîtra dans l'interface MailHog (si configuré) ou sera envoyé réellement (si configuration SMTP réelle).
+
+## 🧯 Dépannage rapide
+
+- `EADDRINUSE: 3001` ou `3000` : un process occupe déjà le port (arrêter l'ancien backend ou changer `PORT`).
+- `ECONNREFUSED 5432` : PostgreSQL n'est pas démarré (`docker compose --profile infra up -d`) ou mauvais `DB_HOST/DB_PORT`.
+- Erreur CORS (`No 'Access-Control-Allow-Origin'`) : vérifier `CORS_ORIGIN` dans `.env` et redémarrer le backend.
+- `dockerDesktopLinuxEngine ... cannot find the file specified` : Docker Desktop n'est pas lancé.
+- `--profile all` échoue si frontend absent : vérifier que le repo frontend sibling attendu par `include` est bien présent.
 
 

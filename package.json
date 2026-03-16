@@ -12,16 +12,16 @@
     "start": "node dist/index.js",
     "migrate": "ts-node scripts/migrate.ts",
     "seed:dev": "ts-node scripts/seed-dev.ts",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "docker:build": "docker build -f docker/Dockerfile -t secret-santa-backend .",
     "docker:down": "docker compose down"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.25.0",
+  "packageManager": "pnpm@10.32.1+sha512.a706938f0e89ac1456b6563eab4edf1d1faf3368d1191fc5c59790e96dc918e4456ab2e67d613de1043d2e8c81f87303e6b40d4ffeca9df15ef1ad567348f2be",
   "dependencies": {
     "@sentry/node": "^10.38.0",
     "@sentry/tracing": "^7.120.4",
@@ -45,7 +45,6 @@
     "@types/express": "^5.0.6",
     "@types/express-rate-limit": "^6.0.2",
     "@types/helmet": "^4.0.0",
-    "@types/jest": "^30.0.0",
     "@types/js-yaml": "^4.0.9",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.1",
@@ -54,11 +53,11 @@
     "@types/supertest": "^6.0.3",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
-    "jest": "^30.2.0",
+    "@vitest/coverage-v8": "^4.1.0",
     "nodemon": "^3.1.11",
     "supertest": "^7.1.4",
-    "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   }
 }

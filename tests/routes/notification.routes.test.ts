@@ -1,21 +1,21 @@
+import { vi, type Mock } from 'vitest';
 import request from 'supertest';
 import app from '../../src/app';
+import * as notificationService from '../../src/services/notification.service';
 
-jest.mock('../../src/middlewares/auth.middleware', () => ({
+vi.mock('../../src/middlewares/auth.middleware', () => ({
   authenticate: (req: any, res: any, next: any) => {
     req.user = { id: 1, email: 'test@example.com' };
     next();
   },
 }));
 
-jest.mock('../../src/services/notification.service', () => ({
-  getNotificationsByUserId: jest.fn(),
-  countUnreadNotifications: jest.fn(),
-  markNotificationAsRead: jest.fn(),
-  markAllNotificationsAsRead: jest.fn(),
+vi.mock('../../src/services/notification.service', () => ({
+  getNotificationsByUserId: vi.fn(),
+  countUnreadNotifications: vi.fn(),
+  markNotificationAsRead: vi.fn(),
+  markAllNotificationsAsRead: vi.fn(),
 }));
-
-const notificationService = require('../../src/services/notification.service');
 
 const mockNotification = {
   id: 'notif-uuid-1',
@@ -31,12 +31,12 @@ const mockNotification = {
 
 describe('GET /api/notifications', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return notifications with unread count', async () => {
-    (notificationService.getNotificationsByUserId as jest.Mock).mockResolvedValue([mockNotification]);
-    (notificationService.countUnreadNotifications as jest.Mock).mockResolvedValue(1);
+    (notificationService.getNotificationsByUserId as Mock).mockResolvedValue([mockNotification]);
+    (notificationService.countUnreadNotifications as Mock).mockResolvedValue(1);
 
     const res = await request(app).get('/api/notifications');
 
@@ -49,8 +49,8 @@ describe('GET /api/notifications', () => {
   });
 
   it('should return empty list when no notifications', async () => {
-    (notificationService.getNotificationsByUserId as jest.Mock).mockResolvedValue([]);
-    (notificationService.countUnreadNotifications as jest.Mock).mockResolvedValue(0);
+    (notificationService.getNotificationsByUserId as Mock).mockResolvedValue([]);
+    (notificationService.countUnreadNotifications as Mock).mockResolvedValue(0);
 
     const res = await request(app).get('/api/notifications');
 
@@ -62,11 +62,11 @@ describe('GET /api/notifications', () => {
 
 describe('GET /api/notifications/unread-count', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should return the unread count', async () => {
-    (notificationService.countUnreadNotifications as jest.Mock).mockResolvedValue(3);
+    (notificationService.countUnreadNotifications as Mock).mockResolvedValue(3);
 
     const res = await request(app).get('/api/notifications/unread-count');
 
@@ -78,12 +78,12 @@ describe('GET /api/notifications/unread-count', () => {
 
 describe('PATCH /api/notifications/:id/read', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should mark a notification as read', async () => {
     const readNotification = { ...mockNotification, is_read: true };
-    (notificationService.markNotificationAsRead as jest.Mock).mockResolvedValue(readNotification);
+    (notificationService.markNotificationAsRead as Mock).mockResolvedValue(readNotification);
 
     const res = await request(app).patch(`/api/notifications/${mockNotification.id}/read`);
 
@@ -94,7 +94,7 @@ describe('PATCH /api/notifications/:id/read', () => {
   });
 
   it('should return 404 if notification not found', async () => {
-    (notificationService.markNotificationAsRead as jest.Mock).mockResolvedValue(null);
+    (notificationService.markNotificationAsRead as Mock).mockResolvedValue(null);
 
     const res = await request(app).patch('/api/notifications/non-existent/read');
 
@@ -105,11 +105,11 @@ describe('PATCH /api/notifications/:id/read', () => {
 
 describe('PATCH /api/notifications/read-all', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it('should mark all notifications as read', async () => {
-    (notificationService.markAllNotificationsAsRead as jest.Mock).mockResolvedValue(5);
+    (notificationService.markAllNotificationsAsRead as Mock).mockResolvedValue(5);
 
     const res = await request(app).patch('/api/notifications/read-all');
 

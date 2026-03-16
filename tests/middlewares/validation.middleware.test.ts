@@ -1,3 +1,4 @@
+import { vi, type Mock } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { validate } from '../../src/middlewares/validation.middleware';
@@ -6,12 +7,12 @@ describe('Validation Middleware', () => {
   let mockRequest: Partial<Request>;
   let mockResponse: Partial<Response>;
   let mockNext: NextFunction;
-  let jsonMock: jest.Mock;
-  let statusMock: jest.Mock;
+  let jsonMock: Mock;
+  let statusMock: Mock;
 
   beforeEach(() => {
-    jsonMock = jest.fn();
-    statusMock = jest.fn().mockReturnValue({ json: jsonMock });
+    jsonMock = vi.fn();
+    statusMock = vi.fn().mockReturnValue({ json: jsonMock });
     
     mockRequest = {
       body: {},
@@ -20,7 +21,7 @@ describe('Validation Middleware', () => {
       status: statusMock,
       json: jsonMock,
     };
-    mockNext = jest.fn();
+    mockNext = vi.fn();
   });
 
   const testSchema = z.object({
