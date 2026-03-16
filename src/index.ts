@@ -1,15 +1,6 @@
-import "dotenv/config";
-
-import * as Sentry from "@sentry/node";
-
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  enabled: true,
-  environment: "production",
-  tracesSampleRate: 1,
-  sampleRate: 1,
-  debug: false,
-});
+// instrument.ts MUST be the first import so Sentry is initialized
+// before app.ts and all other modules are loaded.
+import "./instrument";
 
 import http from "node:http";
 import app from "./app";

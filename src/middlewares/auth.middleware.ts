@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import * as Sentry from "@sentry/node";
 import { extractTokenFromHeader, verifyAccessToken } from "../utils/jwt.utils";
 
 // Extension de l'interface Request pour inclure les infos de l'utilisateur
@@ -41,6 +42,9 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
       id: payload.userId,
       email: payload.email,
     };
+
+    // Enrichit les événements Sentry avec l'identité de l'utilisateur authentifié
+    Sentry.setUser({ id: payload.userId, email: payload.email });
 
     next();
   } catch (error) {

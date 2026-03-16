@@ -109,8 +109,7 @@ Sentry.setupExpressErrorHandler(app);
 // Gestionnaire d'erreurs global
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error("❌ Erreur non gérée:", err);
-  // Capture Sentry
-  Sentry.captureException(err);
+  // setupExpressErrorHandler (above) already forwards the error to Sentry — no need to call captureException again.
   res.status(500).json({
     success: false,
     message: process.env.NODE_ENV === "production" ? "Erreur serveur interne" : err.message,
