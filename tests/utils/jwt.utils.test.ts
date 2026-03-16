@@ -2,7 +2,9 @@ import type { UserWithoutPassword } from "../../src/types/user.types";
 import {
   extractTokenFromHeader,
   signAccessToken,
+  signRefreshToken,
   verifyAccessToken,
+  verifyRefreshToken,
 } from "../../src/utils/jwt.utils";
 
 describe("JWT Utils", () => {
@@ -57,6 +59,24 @@ describe("JWT Utils", () => {
       const token = signAccessToken(mockUser);
       const tamperedToken = `${token.slice(0, -5)}xxxxx`;
       const decoded = verifyAccessToken(tamperedToken);
+
+      expect(decoded).toBeNull();
+    });
+  });
+
+  describe("refresh token helpers", () => {
+    it("should generate and verify a valid refresh token", () => {
+      const token = signRefreshToken(mockUser.id);
+      const decoded = verifyRefreshToken(token);
+
+      expect(typeof token).toBe("string");
+      expect(decoded).not.toBeNull();
+      expect(decoded?.userId).toBe(mockUser.id);
+      expect(decoded?.type).toBe("refresh");
+    });
+
+    it("should return null when refresh token is invalid", () => {
+      const decoded = verifyRefreshToken("not-a-token");
 
       expect(decoded).toBeNull();
     });

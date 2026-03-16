@@ -162,6 +162,27 @@ describe("UserService", () => {
       expect(result.success).toBe(false);
       expect(result.error).toContain("email");
     });
+
+    it("should fail if username is already taken", async () => {
+      (UserModel.emailExistsForOtherUser as Mock).mockResolvedValue(false);
+      (UserModel.usernameExistsForOtherUser as Mock).mockResolvedValue(true);
+
+      const result = await updateUserProfile(1, { username: "already-used" });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("nom d'utilisateur");
+    });
+
+    it("should fail when user does not exist", async () => {
+      (UserModel.emailExistsForOtherUser as Mock).mockResolvedValue(false);
+      (UserModel.usernameExistsForOtherUser as Mock).mockResolvedValue(false);
+      (UserModel.update as Mock).mockResolvedValue(null);
+
+      const result = await updateUserProfile(999, { username: "ghost" });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("Utilisateur non trouvé");
+    });
   });
 
   describe("updateUserPassword", () => {
@@ -181,6 +202,16 @@ describe("UserService", () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain("incorrect");
+    });
+
+    it("should fail if password update does not persist", async () => {
+      (UserModel.verifyPassword as Mock).mockResolvedValue(true);
+      (UserModel.updatePassword as Mock).mockResolvedValue(false);
+
+      const result = await updateUserPassword(1, "old", "new");
+
+      expect(result.success).toBe(false);
+      expect(result.error).toContain("mise à jour du mot de passe");
     });
   });
 });

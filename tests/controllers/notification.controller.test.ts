@@ -60,6 +60,14 @@ describe("notification.controller", () => {
     expect(jsonMock).toHaveBeenCalledWith({ success: true, unreadCount: 5 });
   });
 
+  it("getUnreadCountHandler should return 401 when user is missing", async () => {
+    req = { ...req, user: undefined } as unknown as Request;
+
+    await getUnreadCountHandler(req as Request, res as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(401);
+  });
+
   it("markAsReadHandler should return 404 when notification does not exist", async () => {
     (notificationService.markNotificationAsRead as Mock).mockResolvedValue(null);
 
@@ -78,6 +86,22 @@ describe("notification.controller", () => {
     expect(jsonMock).toHaveBeenCalledWith({ success: true, data: updated });
   });
 
+  it("markAsReadHandler should return 401 when user is missing", async () => {
+    req = { ...req, user: undefined } as unknown as Request;
+
+    await markAsReadHandler(req as Request, res as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(401);
+  });
+
+  it("markAsReadHandler should return 500 when service throws", async () => {
+    (notificationService.markNotificationAsRead as Mock).mockRejectedValue(new Error("boom"));
+
+    await markAsReadHandler(req as Request, res as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(500);
+  });
+
   it("markAllAsReadHandler should return updated count", async () => {
     (notificationService.markAllNotificationsAsRead as Mock).mockResolvedValue(4);
 
@@ -89,6 +113,30 @@ describe("notification.controller", () => {
       message: "4 notification(s) marquée(s) comme lue(s).",
       updatedCount: 4,
     });
+  });
+
+  it("markAllAsReadHandler should return 401 when user is missing", async () => {
+    req = { ...req, user: undefined } as unknown as Request;
+
+    await markAllAsReadHandler(req as Request, res as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(401);
+  });
+
+  it("markAllAsReadHandler should return 500 when service throws", async () => {
+    (notificationService.markAllNotificationsAsRead as Mock).mockRejectedValue(new Error("boom"));
+
+    await markAllAsReadHandler(req as Request, res as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(500);
+  });
+
+  it("getNotificationsHandler should return 500 when service throws", async () => {
+    (notificationService.getNotificationsByUserId as Mock).mockRejectedValue(new Error("boom"));
+
+    await getNotificationsHandler(req as Request, res as Response);
+
+    expect(statusMock).toHaveBeenCalledWith(500);
   });
 
   it("should return 500 when service throws", async () => {

@@ -65,6 +65,16 @@ describe("EventService - Unified Dependency Injection Tests", () => {
   });
 
   describe("createInvitation", () => {
+    it("should return existing invitation when already present", async () => {
+      const existingInvitation = { id: "inv-existing", email: "test@test.com" };
+      mockPoolQuery.mockResolvedValueOnce({ rows: [existingInvitation], rowCount: 1 });
+
+      const result = await createInvitation("event-1", "test@test.com", mockPool);
+
+      expect(result).toEqual(existingInvitation);
+      expect(mockPoolQuery).toHaveBeenCalledTimes(1);
+    });
+
     it("should create a new invitation", async () => {
       mockPoolQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 }); // Existing check
       mockPoolQuery.mockResolvedValueOnce({ rows: [{ id: "inv-1" }] }); // Insertion
@@ -77,6 +87,40 @@ describe("EventService - Unified Dependency Injection Tests", () => {
   });
 
   describe("joinEvent", () => {
+    it("should fail when no invitation exists", async () => {
+      mockPoolQuery.mockResolvedValueOnce({ rows: [] });
+
+      const result = await joinEvent("event-1", 1, "test@test.com", mockPool);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("Aucune invitation");
+      expect(mockPoolQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("should return already joined when invitation is accepted by same user", async () => {
+      mockPoolQuery.mockResolvedValueOnce({
+        rows: [{ id: "inv-1", status: "accepted", user_id: 1 }],
+      });
+
+      const result = await joinEvent("event-1", 1, "test@test.com", mockPool);
+
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("déjà rejoint");
+      expect(mockPoolQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("should fail when invitation is already used by another user", async () => {
+      mockPoolQuery.mockResolvedValueOnce({
+        rows: [{ id: "inv-1", status: "accepted", user_id: 2 }],
+      });
+
+      const result = await joinEvent("event-1", 1, "test@test.com", mockPool);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("déjà été utilisée");
+      expect(mockPoolQuery).toHaveBeenCalledTimes(1);
+    });
+
     it("should successfully join an event", async () => {
       mockPoolQuery.mockResolvedValueOnce({
         rows: [{ id: "inv-1", status: "pending" }],
@@ -115,9 +159,34 @@ describe("EventService - Unified Dependency Injection Tests", () => {
       expect(result).toBe(true);
       expect(mockClientQuery).toHaveBeenCalledWith("COMMIT");
     });
+
+    it("should rollback and rethrow when deletion fails", async () => {
+      const dbError = new Error("DB failure");
+      mockClientQuery
+        .mockResolvedValueOnce({ command: "BEGIN" })
+        .mockRejectedValueOnce(dbError)
+        .mockResolvedValueOnce({ command: "ROLLBACK" });
+
+      await expect(deleteEvent("event-1", mockPool)).rejects.toThrow("DB failure");
+      expect(mockClientQuery).toHaveBeenCalledWith("ROLLBACK");
+      expect(mockClientRelease).toHaveBeenCalled();
+    });
   });
 
   describe("updateEvent", () => {
+    it("should return existing event when payload is empty", async () => {
+      const existingEvent = { id: "event-1", title: "Current Title" };
+      mockPoolQuery.mockResolvedValueOnce({ rows: [existingEvent] });
+
+      const result = await updateEvent("event-1", {}, mockPool);
+
+      expect(result).toEqual(existingEvent);
+      expect(mockPoolQuery).toHaveBeenCalledWith(
+        expect.stringContaining("FROM events WHERE id = $1"),
+        ["event-1"]
+      );
+    });
+
     it("should update an event", async () => {
       const updatedEvent = { id: "event-1", title: "New Title" };
       mockPoolQuery.mockResolvedValueOnce({ rows: [updatedEvent] });
@@ -129,6 +198,42 @@ describe("EventService - Unified Dependency Injection Tests", () => {
   });
 
   describe("performDraw", () => {
+    it("should rollback when there are not enough participants", async () => {
+      mockClientQuery
+        .mockResolvedValueOnce({ command: "BEGIN" })
+        .mockResolvedValueOnce({ rows: [{ title: "Test Event" }] })
+        .mockResolvedValueOnce({
+          rows: [{ user_id: 1, email: "user1@example.com", username: "user1" }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({ command: "ROLLBACK" });
+
+      await expect(performDraw("event-1", mockPool)).rejects.toThrow(
+        "Il faut au moins 2 participants"
+      );
+      expect(mockClientQuery).toHaveBeenCalledWith("ROLLBACK");
+    });
+
+    it("should rollback when a draw already exists", async () => {
+      mockClientQuery
+        .mockResolvedValueOnce({ command: "BEGIN" })
+        .mockResolvedValueOnce({ rows: [{ title: "Test Event" }] })
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 1, email: "user1@example.com", username: "user1" },
+            { user_id: 2, email: "user2@example.com", username: "user2" },
+          ],
+          rowCount: 2,
+        })
+        .mockResolvedValueOnce({ rows: [{ id: "a-existing" }], rowCount: 1 })
+        .mockResolvedValueOnce({ command: "ROLLBACK" });
+
+      await expect(performDraw("event-1", mockPool)).rejects.toThrow(
+        "Un tirage a déjà été effectué"
+      );
+      expect(mockClientQuery).toHaveBeenCalledWith("ROLLBACK");
+    });
+
     it("should perform a draw successfully", async () => {
       mockClientQuery
         .mockResolvedValueOnce({ command: "BEGIN" })
@@ -305,6 +410,26 @@ describe("EventService - Unified Dependency Injection Tests", () => {
   });
 
   describe("addExclusion", () => {
+    it("should throw when giver and receiver are the same user", async () => {
+      await expect(addExclusion("event-1", 1, 1, mockPool)).rejects.toThrow("s'exclure lui-même");
+    });
+
+    it("should throw when giver is not an accepted participant", async () => {
+      mockPoolQuery.mockResolvedValueOnce({ rows: [{ user_id: 2 }], rowCount: 1 });
+
+      await expect(addExclusion("event-1", 1, 2, mockPool)).rejects.toThrow(
+        "Le donneur n'est pas un participant accepté"
+      );
+    });
+
+    it("should throw when receiver is not an accepted participant", async () => {
+      mockPoolQuery.mockResolvedValueOnce({ rows: [{ user_id: 1 }], rowCount: 1 });
+
+      await expect(addExclusion("event-1", 1, 2, mockPool)).rejects.toThrow(
+        "Le receveur n'est pas un participant accepté"
+      );
+    });
+
     it("should add an exclusion", async () => {
       mockPoolQuery.mockResolvedValueOnce({
         rows: [{ user_id: 1 }, { user_id: 2 }],
@@ -318,6 +443,30 @@ describe("EventService - Unified Dependency Injection Tests", () => {
 
       expect(result.giver_id).toBe(1);
       expect(mockPoolQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it("should throw conflict message on duplicate exclusion", async () => {
+      const conflictError = Object.assign(new Error("duplicate"), { code: "23505" });
+      mockPoolQuery.mockResolvedValueOnce({
+        rows: [{ user_id: 1 }, { user_id: 2 }],
+        rowCount: 2,
+      });
+      mockPoolQuery.mockRejectedValueOnce(conflictError);
+
+      await expect(addExclusion("event-1", 1, 2, mockPool)).rejects.toThrow(
+        "Cette exclusion existe déjà pour cet événement"
+      );
+    });
+
+    it("should rethrow non-conflict insertion errors", async () => {
+      const otherError = new Error("insert failed");
+      mockPoolQuery.mockResolvedValueOnce({
+        rows: [{ user_id: 1 }, { user_id: 2 }],
+        rowCount: 2,
+      });
+      mockPoolQuery.mockRejectedValueOnce(otherError);
+
+      await expect(addExclusion("event-1", 1, 2, mockPool)).rejects.toThrow("insert failed");
     });
   });
 
