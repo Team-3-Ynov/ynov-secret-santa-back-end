@@ -1,5 +1,5 @@
-import { pool } from '../config/database';
-import { CreateNotificationDTO, NotificationRecord } from '../models/notification.model';
+import { pool } from "../config/database";
+import type { CreateNotificationDTO, NotificationRecord } from "../models/notification.model";
 
 /**
  * Crée une notification en base de données
@@ -12,7 +12,13 @@ export const createNotification = async (
     `INSERT INTO notifications (user_id, type, title, message, metadata)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [dto.userId, dto.type, dto.title, dto.message, dto.metadata ? JSON.stringify(dto.metadata) : null]
+    [
+      dto.userId,
+      dto.type,
+      dto.title,
+      dto.message,
+      dto.metadata ? JSON.stringify(dto.metadata) : null,
+    ]
   );
   return result.rows[0];
 };
@@ -80,4 +86,3 @@ export const markAllNotificationsAsRead = async (
   );
   return result.rowCount ?? 0;
 };
-

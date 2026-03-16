@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 
+
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 
@@ -81,7 +82,8 @@ CREATE TABLE IF NOT EXISTS assignments (
     receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
+
     UNIQUE(event_id, giver_id),
     UNIQUE(event_id, receiver_id),
     CHECK (giver_id <> receiver_id)

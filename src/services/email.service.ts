@@ -1,16 +1,17 @@
-import nodemailer from 'nodemailer';
-import 'dotenv/config';
+import nodemailer from "nodemailer";
+import "dotenv/config";
 
-const isDev = process.env.NODE_ENV !== 'production' || process.env.SMTP_PORT === '1025';
+const isDev = process.env.NODE_ENV !== "production" || process.env.SMTP_PORT === "1025";
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST === 'localhost' ? '127.0.0.1' : (process.env.SMTP_HOST || 'smtp.gmail.com'),
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false, // true for 465, false for other ports
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
+  host:
+    process.env.SMTP_HOST === "localhost" ? "127.0.0.1" : process.env.SMTP_HOST || "smtp.gmail.com",
+  port: parseInt(process.env.SMTP_PORT || "587", 10),
+  secure: false, // true for 465, false for other ports
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
 });
 
 export const sendInvitationEmail = async (to: string, eventTitle: string, inviteLink: string) => {
@@ -21,11 +22,11 @@ export const sendInvitationEmail = async (to: string, eventTitle: string, invite
         return;
     }
 
-    const mailOptions = {
-        from: process.env.SMTP_FROM || '"Secret Santa" <noreply@secretsanta.com>',
-        to,
-        subject: `Invitation à l'évènement Secret Santa : ${eventTitle}`,
-        html: `
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"Secret Santa" <noreply@secretsanta.com>',
+    to,
+    subject: `Invitation à l'évènement Secret Santa : ${eventTitle}`,
+    html: `
       <h1>Vous êtes invité !</h1>
       <p>Bonjour,</p>
       <p>Vous avez été invité à participer à l'évènement Secret Santa <strong>${eventTitle}</strong>.</p>
@@ -33,7 +34,7 @@ export const sendInvitationEmail = async (to: string, eventTitle: string, invite
       <a href="${inviteLink}" style="padding: 10px 20px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 5px;">Rejoindre l'évènement</a>
       <p>Si le bouton ne fonctionne pas, copiez ce lien : ${inviteLink}</p>
     `,
-    };
+  };
 
     try {
         const info = await transporter.sendMail(mailOptions);
@@ -53,13 +54,15 @@ export const sendInvitationEmail = async (to: string, eventTitle: string, invite
         }
         throw error;
     }
+    throw error;
+  }
 };
 
 export const sendDrawResultEmail = async (
-    to: string,
-    giverUsername: string,
-    receiverUsername: string,
-    eventTitle: string
+  to: string,
+  giverUsername: string,
+  receiverUsername: string,
+  eventTitle: string
 ) => {
     if (isDev && (!process.env.SMTP_USER || !process.env.SMTP_PASS) && process.env.SMTP_HOST !== 'mailhog') {
         console.warn('⚠️ [DEV MODE] SMTP credentials not found. Email simulation used.');
@@ -67,11 +70,11 @@ export const sendDrawResultEmail = async (
         return;
     }
 
-    const mailOptions = {
-        from: process.env.SMTP_FROM || '"Secret Santa" <noreply@secretsanta.com>',
-        to,
-        subject: `🎅 Résultat du tirage Secret Santa : ${eventTitle}`,
-        html: `
+  const mailOptions = {
+    from: process.env.SMTP_FROM || '"Secret Santa" <noreply@secretsanta.com>',
+    to,
+    subject: `🎅 Résultat du tirage Secret Santa : ${eventTitle}`,
+    html: `
       <h1>🎁 Le tirage a été effectué !</h1>
       <p>Bonjour <strong>${giverUsername}</strong>,</p>
       <p>Le tirage au sort pour l'évènement Secret Santa <strong>${eventTitle}</strong> vient d'être réalisé.</p>
@@ -82,7 +85,7 @@ export const sendDrawResultEmail = async (
       <p>Gardez ce secret jusqu'au jour J ! 🤫</p>
       <p style="color: #888; font-size: 12px;">Cet email est confidentiel, ne le partagez pas.</p>
     `,
-    };
+  };
 
     try {
         const info = await transporter.sendMail(mailOptions);
@@ -101,5 +104,6 @@ export const sendDrawResultEmail = async (
         }
         throw error;
     }
+    throw error;
+  }
 };
-

@@ -121,7 +121,7 @@ services:
       start_period: 10s
     restart: unless-stopped
     ports:
-      - "${POSTGRES_PORT_MAPPING:-5432}"
+      - 5432:5432
     networks:
       - backend-database
 

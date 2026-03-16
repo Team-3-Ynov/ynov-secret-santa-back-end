@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
+import type { NextFunction, Request, Response } from "express";
+import type { z } from "zod";
 
 /**
  * Middleware de validation des données avec Zod
@@ -10,12 +10,12 @@ export const validate = (schema: z.ZodType) => {
 
     if (!result.success) {
       const errors = result.error.issues.map((issue) => ({
-        field: issue.path.join('.'),
+        field: issue.path.join("."),
         message: issue.message,
       }));
       res.status(400).json({
         success: false,
-        message: 'Données invalides',
+        message: "Données invalides",
         errors,
       });
       return;
@@ -24,4 +24,3 @@ export const validate = (schema: z.ZodType) => {
     next();
   };
 };
-

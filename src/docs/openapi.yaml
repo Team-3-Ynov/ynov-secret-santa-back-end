@@ -3,20 +3,17 @@
 # ═══════════════════════════════════════════════════════════════
 
 openapi: 3.0.0
-
 info:
   title: Secret Santa API
   version: 1.0.0
   description: API pour gérer les échanges de cadeaux Secret Santa 🎅
   contact:
     name: Support API
-
 servers:
   - url: http://localhost:3000
     description: Serveur de développement
   - url: http://localhost
     description: Serveur Docker (via Nginx)
-
 tags:
   - name: Health
     description: Vérification de l'état de l'API
@@ -26,7 +23,262 @@ tags:
     description: Gestion des événements Secret Santa
   - name: Users
     description: Gestion du profil utilisateur
-
+  - name: Notifications
+    description: Gestion des notifications
+paths:
+  /users/me:
+    get:
+      tags:
+        - Users
+      summary: Récupérer le profil utilisateur
+      description: Retourne les informations du profil utilisateur
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /events:
+    post:
+      tags:
+        - Events
+      summary: Créer un nouvel événement
+      description: Crée un nouvel événement Secret Santa
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - eventDate
+              properties:
+                title:
+                  type: string
+                  description: Titre de l'événement
+                description:
+                  type: string
+                  description: Description de l'événement
+                eventDate:
+                  type: string
+                  format: date-time
+                  description: Date de l'événement
+                budget:
+                  type: number
+                  description: Budget par personne
+      responses:
+        '201':
+          description: Événement créé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Event'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /events/{id}:
+    get:
+      tags:
+        - Events
+      summary: Récupérer un événement
+      description: Retourne les détails d'un événement spécifique
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID de l'événement
+      responses:
+        '200':
+          description: Détails de l'événement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Event'
+        '404':
+          description: Événement non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Inscription d'un nouvel utilisateur
+      description: Crée un nouveau compte utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Compte créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Connexion utilisateur
+      description: Authentifie un utilisateur et retourne un token JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /auth/me:
+    get:
+      tags:
+        - Auth
+      summary: Récupérer le profil utilisateur
+      description: Retourne les informations du profil de l'utilisateur authentifié
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/User'
+        '401':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Erreur serveur
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Vérifier l'état de l'API
+      description: Retourne l'état de santé de l'API et des services dépendants
+      responses:
+        '200':
+          description: API opérationnelle
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: OK
+                  timestamp:
+                    type: string
+                    format: date-time
+                  database:
+                    type: string
+                    example: connected
+                  environment:
+                    type: string
+                    example: production
 components:
   securitySchemes:
     bearerAuth:
@@ -34,39 +286,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: Entrez votre token JWT
-
   schemas:
-    # ═══════════════════════════════════════════════════════════════
-    # User Schemas
-    # ═══════════════════════════════════════════════════════════════
-    User:
-      type: object
-      properties:
-        id:
-          type: integer
-          description: ID unique de l'utilisateur
-          example: 1
-        email:
-          type: string
-          format: email
-          description: Adresse email de l'utilisateur
-          example: user@example.com
-        username:
-          type: string
-          description: Nom d'utilisateur
-          example: johndoe
-        created_at:
-          type: string
-          format: date-time
-          description: Date de création du compte
-        updated_at:
-          type: string
-          format: date-time
-          description: Date de dernière mise à jour
-
-    # ═══════════════════════════════════════════════════════════════
-    # Auth Request Schemas
-    # ═══════════════════════════════════════════════════════════════
     RegisterRequest:
       type: object
       required:
@@ -78,19 +298,15 @@ components:
           type: string
           format: email
           description: Adresse email valide
-          example: user@example.com
         password:
           type: string
           minLength: 8
-          description: "Mot de passe (min 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre)"
-          example: MonMotDePasse123
+          description: Mot de passe (min 8 caractères, 1 majuscule, 1 minuscule, 1 chiffre)
         username:
           type: string
           minLength: 3
           maxLength: 50
-          description: "Nom d'utilisateur (lettres, chiffres, underscores)"
-          example: johndoe
-
+          description: Nom d'utilisateur (lettres, chiffres, underscores)
     LoginRequest:
       type: object
       required:
@@ -101,15 +317,57 @@ components:
           type: string
           format: email
           description: Adresse email
-          example: user@example.com
         password:
           type: string
           description: Mot de passe
-          example: MonMotDePasse123
-
-    # ═══════════════════════════════════════════════════════════════
-    # Response Schemas
-    # ═══════════════════════════════════════════════════════════════
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID unique de l'utilisateur
+        email:
+          type: string
+          format: email
+          description: Adresse email de l'utilisateur
+        username:
+          type: string
+          description: Nom d'utilisateur
+        created_at:
+          type: string
+          format: date-time
+          description: Date de création du compte
+        updated_at:
+          type: string
+          format: date-time
+          description: Date de dernière mise à jour
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID unique de l'événement
+        title:
+          type: string
+          description: Titre de l'événement
+        description:
+          type: string
+          description: Description de l'événement
+        eventDate:
+          type: string
+          format: date-time
+          description: Date de l'événement
+        budget:
+          type: number
+          description: Budget par personne
+        createdAt:
+          type: string
+          format: date-time
+          description: Date de création de l'événement
+        updatedAt:
+          type: string
+          format: date-time
+          description: Date de dernière mise à jour
     AuthResponse:
       type: object
       properties:
@@ -123,12 +381,10 @@ components:
           type: object
           properties:
             user:
-              $ref: "#/components/schemas/User"
+              $ref: '#/components/schemas/User'
             token:
               type: string
               description: Token JWT pour l'authentification
-              example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-
     ErrorResponse:
       type: object
       properties:
@@ -138,324 +394,3 @@ components:
         message:
           type: string
           example: Erreur de validation
-
-    ValidationErrorResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          example: false
-        message:
-          type: string
-          example: Données invalides
-        errors:
-          type: array
-          items:
-            type: object
-            properties:
-              field:
-                type: string
-                example: password
-              message:
-                type: string
-                example: Le mot de passe doit contenir au moins 8 caractères
-
-    HealthResponse:
-      type: object
-      properties:
-        status:
-          type: string
-          example: OK
-        timestamp:
-          type: string
-          format: date-time
-        database:
-          type: string
-          example: connected
-        environment:
-          type: string
-          example: production
-
-    # ═══════════════════════════════════════════════════════════════
-    # Event Schemas
-    # ═══════════════════════════════════════════════════════════════
-    EventRequest:
-      type: object
-      required:
-        - title
-        - eventDate
-      properties:
-        title:
-          type: string
-          description: Titre de l'événement
-          example: Secret Santa Noël 2025
-        description:
-          type: string
-          description: Description de l'événement
-          example: Échange de cadeaux pour Noël
-        eventDate:
-          type: string
-          format: date-time
-          description: Date de l'événement (doit être dans le futur)
-          example: "2025-12-25T18:00:00.000Z"
-        budget:
-          type: number
-          description: Budget par personne
-          example: 30
-
-    Event:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: ID unique de l'événement
-        title:
-          type: string
-          example: Secret Santa Noël 2025
-        description:
-          type: string
-          example: Échange de cadeaux pour Noël
-        eventDate:
-          type: string
-          format: date-time
-        budget:
-          type: number
-          example: 30
-        ownerEmail:
-          type: string
-          format: email
-        createdAt:
-          type: string
-          format: date-time
-
-    Exclusion:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        event_id:
-          type: string
-          format: uuid
-        giver_id:
-          type: integer
-          example: 1
-        receiver_id:
-          type: integer
-          example: 2
-        created_at:
-          type: string
-          format: date-time
-
-    AddExclusionRequest:
-      type: object
-      required:
-        - giverId
-        - receiverId
-      properties:
-        giverId:
-          type: integer
-          description: ID de l'utilisateur qui ne doit pas donner
-          example: 1
-        receiverId:
-          type: integer
-          description: ID de l'utilisateur qui ne doit pas recevoir
-          example: 2
-
-paths:
-# ═══════════════════════════════════════════════════════════════
-# Health
-# ═══════════════════════════════════════════════════════════════
-/health:
-  get:
-    tags: [Health]
-    summary: Vérifier l'état de l'API
-    responses:
-      200:
-        description: API en ligne
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/HealthResponse"
-
-# ═══════════════════════════════════════════════════════════════
-# Auth
-# ═══════════════════════════════════════════════════════════════
-/auth/register:
-  post:
-    tags: [Auth]
-    summary: Créer un nouveau compte
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/RegisterRequest"
-    responses:
-      201:
-        description: Compte créé
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthResponse"
-      400:
-        description: Données invalides
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ValidationErrorResponse"
-
-/auth/login:
-  post:
-    tags: [Auth]
-    summary: Se connecter
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/LoginRequest"
-    responses:
-      200:
-        description: Connexion réussie
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthResponse"
-      401:
-        description: Identifiants incorrects
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ErrorResponse"
-
-# ═══════════════════════════════════════════════════════════════
-  # Events
-  # ═══════════════════════════════════════════════════════════════
-  /events:
-    get:
-      tags: [Events]
-      summary: Liste les événements de l'utilisateur
-      security:
-        - bearerAuth: []
-      responses:
-        200:
-          description: Liste des événements
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Event"
-
-    post:
-      tags: [Events]
-      summary: Créer un nouvel événement
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/EventRequest"
-      responses:
-        201:
-          description: Événement créé
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Event"
-
-  /events/{id}/exclusions:
-    get:
-      tags: [Events]
-      summary: Liste toutes les exclusions d'un événement
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        200:
-          description: Liste des exclusions
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Exclusion"
-
-    patch:
-      tags: [Events]
-      summary: Ajouter une exclusion nominative
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AddExclusionRequest"
-      responses:
-        201:
-          description: Exclusion ajoutée
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Exclusion"
-
-  /events/{id}/exclusions/{exclusionId}:
-    delete:
-      tags: [Events]
-      summary: Supprimer une exclusion
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - name: exclusionId
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        200:
-          description: Exclusion supprimée
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string

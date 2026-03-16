@@ -1,0 +1,19 @@
+# Configuration pour Spectral - Linter OpenAPI
+# https://stoplight.io/open-source/spectral
+
+rules:
+  # Vérifie que les opérations ont une description
+  operation-description:
+    description: "Les opérations doivent avoir une description"
+    given: "$.paths[*][*]"
+    then:
+      field: "description"
+      function: truthy
+  
+  # Vérifie que les opérations ont des tags
+  operation-tags:
+    description: "Les opérations doivent avoir des tags"
+    given: "$.paths[*][*]"
+    then:
+      field: "tags"
+      function: truthy

@@ -1,0 +1,36 @@
+echo "Running pre-commit checks for backend..."
+
+# Generate OpenAPI spec
+echo "Generating OpenAPI specification..."
+pnpm run generate:openapi
+if [ $? -ne 0 ]; then
+  echo "OpenAPI generation failed."
+  exit 1
+fi
+
+# Validate OpenAPI spec
+echo "Validating OpenAPI specification..."
+pnpm run validate:openapi
+if [ $? -ne 0 ]; then
+  echo "OpenAPI validation failed. Fix specification errors before committing."
+  exit 1
+fi
+
+# Run lint-staged
+npx lint-staged
+if [ $? -ne 0 ]; then
+  echo "Lint-staged failed. Fix linting and type errors before committing."
+  exit 1
+fi
+
+# Run tests with coverage
+echo "Running tests with coverage..."
+pnpm test:coverage
+if [ $? -ne 0 ]; then
+  echo "Tests failed. Fix tests before committing."
+  exit 1
+fi
+
+echo "Coverage thresholds checked by Vitest configuration."
+
+echo "All pre-commit checks passed!"

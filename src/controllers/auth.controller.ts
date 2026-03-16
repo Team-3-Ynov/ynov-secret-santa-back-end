@@ -1,14 +1,10 @@
-import { Request, Response } from 'express';
-import { UserModel } from '../models/user.model';
-import { RefreshTokenModel } from '../models/refresh_token.model';
-import {
-  signAccessToken,
-  signRefreshToken,
-  verifyRefreshToken
-} from '../utils/jwt.utils';
-import { RegisterInput, LoginInput } from '../schemas/auth.schema';
-import { AuthenticatedRequest } from '../middlewares/auth.middleware';
-import { getUserStats } from '../services/user.service';
+import type { Request, Response } from "express";
+import type { AuthenticatedRequest } from "../middlewares/auth.middleware";
+import { RefreshTokenModel } from "../models/refresh_token.model";
+import { UserModel } from "../models/user.model";
+import type { LoginInput, RegisterInput } from "../schemas/auth.schema";
+import { getUserStats } from "../services/user.service";
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt.utils";
 
 export const AuthController = {
   /**
@@ -22,13 +18,16 @@ export const AuthController = {
       // Vérifications existantes...
       const emailExists = await UserModel.emailExists(email);
       if (emailExists) {
-        res.status(409).json({ success: false, message: 'Cet email est déjà utilisé' });
+        res.status(409).json({ success: false, message: "Cet email est déjà utilisé" });
         return;
       }
 
       const usernameExists = await UserModel.usernameExists(username);
       if (usernameExists) {
-        res.status(409).json({ success: false, message: 'Ce nom d\'utilisateur est déjà pris' });
+        res.status(409).json({
+          success: false,
+          message: "Ce nom d'utilisateur est déjà pris",
+        });
         return;
       }
 
@@ -54,16 +53,19 @@ export const AuthController = {
 
       res.status(201).json({
         success: true,
-        message: 'Compte créé avec succès',
+        message: "Compte créé avec succès",
         data: {
           user,
           accessToken,
-          refreshToken
+          refreshToken,
         },
       });
     } catch (error) {
-      console.error('Erreur lors de l\'inscription:', error);
-      res.status(500).json({ success: false, message: 'Erreur serveur lors de l\'inscription' });
+      console.error("Erreur lors de l'inscription:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erreur serveur lors de l'inscription",
+      });
     }
   },
 
@@ -78,7 +80,7 @@ export const AuthController = {
       const user = await UserModel.verifyCredentials(email, password);
 
       if (!user) {
-        res.status(401).json({ success: false, message: 'Email ou mot de passe incorrect' });
+        res.status(401).json({ success: false, message: "Email ou mot de passe incorrect" });
         return;
       }
 
@@ -104,16 +106,19 @@ export const AuthController = {
 
       res.status(200).json({
         success: true,
-        message: 'Connexion réussie',
+        message: "Connexion réussie",
         data: {
           user: userWithoutPassword,
           accessToken,
-          refreshToken
+          refreshToken,
         },
       });
     } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
-      res.status(500).json({ success: false, message: 'Erreur serveur lors de la connexion' });
+      console.error("Erreur lors de la connexion:", error);
+      res.status(500).json({
+        success: false,
+        message: "Erreur serveur lors de la connexion",
+      });
     }
   },
 
@@ -126,14 +131,19 @@ export const AuthController = {
       const { refreshToken } = req.body;
 
       if (!refreshToken) {
-        res.status(400).json({ success: false, message: 'Refresh token manquant' });
+        res.status(400).json({ success: false, message: "Refresh token manquant" });
         return;
       }
 
       // 1. Vérifier la signature du token
       const payload = verifyRefreshToken(refreshToken);
       if (!payload) {
-        res.status(401).json({ success: false, message: 'Refresh token invalide' });
+        res.status(401).json({ success: false, message: "Refresh token invalide" });
+        return;
+      }
+
+      if (payload.type !== "refresh") {
+        res.status(401).json({ success: false, message: "Type de token invalide" });
         return;
       }
 
@@ -142,24 +152,34 @@ export const AuthController = {
       if (!storedToken || storedToken.revoked) {
         // Détection de vol potentiel de refresh token !
         // Si on tente d'utiliser un token révoqué, on invalide tout pour cet utilisateur par sécurité
-        if (storedToken && storedToken.revoked) {
-          console.warn(`Tentative de réutilisation d'un token révoqué pour userId ${payload.userId}`);
+        if (storedToken?.revoked) {
+          console.warn(
+            `Tentative de réutilisation d'un token révoqué pour userId ${payload.userId}`
+          );
           await RefreshTokenModel.revokeAllForUser(payload.userId);
         }
-        res.status(401).json({ success: false, message: 'Refresh token invalide ou révoqué' });
+        res.status(401).json({
+          success: false,
+          message: "Refresh token invalide ou révoqué",
+        });
+        return;
+      }
+
+      if (storedToken.user_id !== payload.userId) {
+        res.status(401).json({ success: false, message: "Refresh token invalide" });
         return;
       }
 
       // 3. Vérifier l'expiration (base de données)
       if (new Date() > storedToken.expires_at) {
-        res.status(401).json({ success: false, message: 'Refresh token expiré' });
+        res.status(401).json({ success: false, message: "Refresh token expiré" });
         return;
       }
 
       // 4. Générer de nouveaux tokens (Rotation)
       const user = await UserModel.findById(payload.userId);
       if (!user) {
-        res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+        res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
         return;
       }
 
@@ -177,13 +197,12 @@ export const AuthController = {
         success: true,
         data: {
           accessToken: newAccessToken,
-          refreshToken: newRefreshToken
-        }
+          refreshToken: newRefreshToken,
+        },
       });
-
     } catch (error) {
-      console.error('Erreur refresh token:', error);
-      res.status(500).json({ success: false, message: 'Erreur serveur' });
+      console.error("Erreur refresh token:", error);
+      res.status(500).json({ success: false, message: "Erreur serveur" });
     }
   },
 
@@ -201,11 +220,11 @@ export const AuthController = {
 
       res.status(200).json({
         success: true,
-        message: 'Déconnexion réussie'
+        message: "Déconnexion réussie",
       });
     } catch (error) {
-      console.error('Erreur logout:', error);
-      res.status(500).json({ success: false, message: 'Erreur serveur' });
+      console.error("Erreur logout:", error);
+      res.status(500).json({ success: false, message: "Erreur serveur" });
     }
   },
 
@@ -220,7 +239,7 @@ export const AuthController = {
 
       const user = await UserModel.findById(userId);
       if (!user) {
-        res.status(404).json({ success: false, message: 'Utilisateur non trouvé' });
+        res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
         return;
       }
 
@@ -232,8 +251,8 @@ export const AuthController = {
         data: { user: { ...user, stats } },
       });
     } catch (error) {
-      console.error('Erreur lors de la récupération du profil:', error);
-      res.status(500).json({ success: false, message: 'Erreur serveur' });
+      console.error("Erreur lors de la récupération du profil:", error);
+      res.status(500).json({ success: false, message: "Erreur serveur" });
     }
   },
 };
