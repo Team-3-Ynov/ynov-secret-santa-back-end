@@ -1,4 +1,4 @@
-import { pool } from '../config/database';
+import { pool } from "../config/database";
 
 export interface RefreshToken {
   id: number;
@@ -27,7 +27,7 @@ export const RefreshTokenModel = {
    * Trouve un token en base
    */
   async findByToken(token: string): Promise<RefreshToken | null> {
-    const query = 'SELECT * FROM refresh_tokens WHERE token = $1';
+    const query = "SELECT * FROM refresh_tokens WHERE token = $1";
     const result = await pool.query(query, [token]);
     return result.rows[0] || null;
   },
@@ -36,7 +36,7 @@ export const RefreshTokenModel = {
    * Revoque un token (soft delete ou flag)
    */
   async revoke(token: string): Promise<void> {
-    const query = 'UPDATE refresh_tokens SET revoked = true WHERE token = $1';
+    const query = "UPDATE refresh_tokens SET revoked = true WHERE token = $1";
     await pool.query(query, [token]);
   },
 
@@ -44,7 +44,7 @@ export const RefreshTokenModel = {
    * Supprime tous les refresh tokens d'un utilisateur (logout global)
    */
   async revokeAllForUser(userId: number): Promise<void> {
-    const query = 'UPDATE refresh_tokens SET revoked = true WHERE user_id = $1';
+    const query = "UPDATE refresh_tokens SET revoked = true WHERE user_id = $1";
     await pool.query(query, [userId]);
-  }
+  },
 };

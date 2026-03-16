@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken, extractTokenFromHeader } from '../utils/jwt.utils';
+import type { NextFunction, Request, Response } from "express";
+import { extractTokenFromHeader, verifyAccessToken } from "../utils/jwt.utils";
 
 // Extension de l'interface Request pour inclure les infos de l'utilisateur
 // Cela assure un typage strict dans les contrôleurs
@@ -21,7 +21,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
     if (!token) {
       res.status(401).json({
         success: false,
-        message: 'Accès non autorisé : Token manquant',
+        message: "Accès non autorisé : Token manquant",
       });
       return;
     }
@@ -31,7 +31,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
     if (!payload) {
       res.status(401).json({
         success: false,
-        message: 'Accès non autorisé : Token invalide ou expiré',
+        message: "Accès non autorisé : Token invalide ou expiré",
       });
       return;
     }
@@ -44,10 +44,10 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
 
     next();
   } catch (error) {
-    console.error('Erreur middleware auth:', error);
+    console.error("Erreur middleware auth:", error);
     res.status(500).json({
       success: false,
-      message: 'Erreur serveur lors de l\'authentification',
+      message: "Erreur serveur lors de l'authentification",
     });
   }
 };
