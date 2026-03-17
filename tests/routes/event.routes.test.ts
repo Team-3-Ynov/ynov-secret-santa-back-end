@@ -23,6 +23,8 @@ vi.mock('../../src/services/email.service', () => ({
 // Mock du service notification pour éviter les appels BDD
 vi.mock('../../src/services/notification.service', () => ({
   createNotification: vi.fn().mockResolvedValue(undefined),
+  markInvitationNotificationAsRead: vi.fn().mockResolvedValue(1),
+  updateInvitationNotificationStatus: vi.fn().mockResolvedValue(1),
 }));
 
 vi.mock('../../src/models/user.model', () => ({
@@ -95,6 +97,7 @@ vi.mock('../../src/services/event.service', () => ({
   findInvitationById: vi.fn(),
   deleteInvitation: vi.fn().mockResolvedValue(true),
   joinEvent: vi.fn(),
+  declineInvitation: vi.fn(),
   performDraw: vi.fn().mockResolvedValue({ assignments: [], notifications: [] }),
   getAssignment: vi.fn(),
   getEventsByUserId: vi.fn(),
@@ -289,6 +292,14 @@ describe('POST /api/events/:id/invite', () => {
     expect(res.body.email).toBe('guest@example.com');
     expect(UserModel.findByEmail).toHaveBeenCalledWith('guest@example.com');
     expect(notificationService.createNotification).toHaveBeenCalledTimes(1);
+    expect(notificationService.createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          invitationToken: expect.any(String),
+          invitationStatus: 'pending',
+        }),
+      })
+    );
   });
 
   it('should return 400 if email is invalid', async () => {
@@ -420,13 +431,19 @@ describe('POST /api/events/:id/join', () => {
   });
 
   it('should join an event successfully', async () => {
-    (eventService.joinEvent as Mock).mockResolvedValue({ success: true, message: 'Vous avez rejoint l\'événement avec succès !' });
+    (eventService.joinEvent as Mock).mockResolvedValue({
+      success: true,
+      message: 'Vous avez rejoint l\'événement avec succès !',
+      invitationId: 'invit-1',
+    });
 
     const res = await request(app)
       .post(`/api/events/${mockEvent.id}/join`);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
+    expect(notificationService.updateInvitationNotificationStatus).toHaveBeenCalledWith('invit-1', 1, 'accepted');
+    expect(notificationService.markInvitationNotificationAsRead).toHaveBeenCalledWith('invit-1', 1);
   });
 
   it('should return 400 if no invitation found', async () => {
@@ -436,6 +453,88 @@ describe('POST /api/events/:id/join', () => {
       .post(`/api/events/${mockEvent.id}/join`);
 
     expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('should return 400 when invitation token is invalid', async () => {
+    const res = await request(app)
+      .post(`/api/events/${mockEvent.id}/join`)
+      .send({ token: 'bad-token' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toBe('Token d\'invitation invalide ou expiré.');
+    expect(eventService.joinEvent).not.toHaveBeenCalled();
+  });
+
+  it('should accept a legacy invitationId UUID passed as token', async () => {
+    (eventService.joinEvent as Mock).mockResolvedValue({
+      success: true,
+      message: 'Vous avez rejoint l\'événement avec succès !',
+      invitationId: '11111111-1111-4111-8111-111111111111',
+    });
+
+    const res = await request(app)
+      .post(`/api/events/${mockEvent.id}/join`)
+      .send({ token: '11111111-1111-4111-8111-111111111111' });
+
+    expect(res.status).toBe(200);
+    expect(eventService.joinEvent).toHaveBeenCalledWith(
+      mockEvent.id,
+      1,
+      'test@example.com',
+      undefined,
+      '11111111-1111-4111-8111-111111111111'
+    );
+  });
+});
+
+describe('PATCH /api/events/:id/invitations/:invitationId/decline', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should decline an invitation successfully', async () => {
+    (eventService.declineInvitation as Mock).mockResolvedValue({
+      success: true,
+      message: 'Invitation refusée avec succès.',
+      invitationId: 'invit-1',
+    });
+
+    const res = await request(app)
+      .patch(`/api/events/${mockEvent.id}/invitations/invit-1/decline`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.message).toBe('Invitation refusée avec succès.');
+    expect(notificationService.updateInvitationNotificationStatus).toHaveBeenCalledWith('invit-1', 1, 'declined');
+    expect(notificationService.markInvitationNotificationAsRead).toHaveBeenCalledWith('invit-1', 1);
+  });
+
+  it('should return 400 when invitation is already accepted', async () => {
+    (eventService.declineInvitation as Mock).mockResolvedValue({
+      success: false,
+      statusCode: 400,
+      message: 'Impossible de refuser une invitation déjà acceptée.',
+    });
+
+    const res = await request(app)
+      .patch(`/api/events/${mockEvent.id}/invitations/invit-1/decline`);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it('should return 404 when invitation does not exist', async () => {
+    (eventService.declineInvitation as Mock).mockResolvedValue({
+      success: false,
+      statusCode: 404,
+      message: 'Invitation non trouvée.',
+    });
+
+    const res = await request(app)
+      .patch(`/api/events/${mockEvent.id}/invitations/non-existent/decline`);
+
+    expect(res.status).toBe(404);
     expect(res.body.success).toBe(false);
   });
 });

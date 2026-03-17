@@ -26,6 +26,8 @@ tags:
     description: Gestion des événements Secret Santa
   - name: Users
     description: Gestion du profil utilisateur
+  - name: Notifications
+    description: Notifications in-app de l'utilisateur
 
 components:
   securitySchemes:
@@ -262,6 +264,81 @@ components:
           type: integer
           description: ID de l'utilisateur qui ne doit pas recevoir
           example: 2
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: integer
+          example: 1
+        type:
+          type: string
+          enum: [draw_result, invitation, info]
+          example: invitation
+        title:
+          type: string
+          example: Invitation - Secret Santa Noel
+        message:
+          type: string
+          example: Vous avez recu une nouvelle invitation.
+        is_read:
+          type: boolean
+          example: false
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+          example:
+            eventId: 66f2eaf2-0f19-4f5f-b7b1-f6bb7b85e090
+            invitationId: 2a08bfbf-4ef6-4ca9-ac67-43d5374422ee
+            invitationStatus: pending
+            respondedAt: null
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Notification"
+        unreadCount:
+          type: integer
+          example: 2
+
+    UnreadCountResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        unreadCount:
+          type: integer
+          example: 2
+
+    InvitationActionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Invitation refusee avec succes.
+        invitationId:
+          type: string
+          format: uuid
 
 paths:
 # ═══════════════════════════════════════════════════════════════

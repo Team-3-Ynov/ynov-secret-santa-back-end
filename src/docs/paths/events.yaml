@@ -1,0 +1,831 @@
+# ═══════════════════════════════════════════════════════════════
+# Events Endpoints
+# ═══════════════════════════════════════════════════════════════
+
+/api/events:
+  get:
+    tags:
+      - Events
+    summary: Lister les evenements de l'utilisateur
+    operationId: getUserEvents
+    security:
+      - bearerAuth: []
+    responses:
+      "200":
+        description: Liste des evenements
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: "../openapi.yaml#/components/schemas/Event"
+      "401":
+        description: Non authentifie
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+  post:
+    tags:
+      - Events
+    summary: Creer un evenement
+    operationId: createEvent
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../openapi.yaml#/components/schemas/EventRequest"
+    responses:
+      "201":
+        description: Evenement cree
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  $ref: "../openapi.yaml#/components/schemas/Event"
+      "400":
+        description: Donnees invalides
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ValidationErrorResponse"
+      "401":
+        description: Non authentifie
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}:
+  get:
+    tags:
+      - Events
+    summary: Recuperer un evenement
+    operationId: getEvent
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Evenement trouve
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  $ref: "../openapi.yaml#/components/schemas/Event"
+      "401":
+        description: Non authentifie
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+  put:
+    tags:
+      - Events
+    summary: Mettre a jour un evenement
+    operationId: updateEvent
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+              eventDate:
+                type: string
+                format: date-time
+              budget:
+                type: number
+    responses:
+      "200":
+        description: Evenement mis a jour
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  $ref: "../openapi.yaml#/components/schemas/Event"
+      "400":
+        description: Donnees invalides
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ValidationErrorResponse"
+      "403":
+        description: Non autorise (non proprietaire)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+  delete:
+    tags:
+      - Events
+    summary: Supprimer un evenement
+    operationId: deleteEvent
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Evenement supprime
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+      "403":
+        description: Non autorise (non proprietaire)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/participants:
+  get:
+    tags:
+      - Events
+    summary: Lister les participants d'un evenement
+    operationId: getEventParticipants
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Participants recuperes
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      username:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+      "401":
+        description: Non authentifie
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/invitations:
+  get:
+    tags:
+      - Events
+    summary: Lister les invitations d'un evenement
+    operationId: getEventInvitations
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Invitations recuperees
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      event_id:
+                        type: string
+                        format: uuid
+                      email:
+                        type: string
+                        format: email
+                      status:
+                        type: string
+                        enum: [pending, accepted, declined]
+                      user_id:
+                        type: integer
+                        nullable: true
+                      username:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+      "401":
+        description: Non authentifie
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "403":
+        description: Non autorise (non proprietaire)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/invite:
+  post:
+    tags:
+      - Events
+    summary: Inviter un utilisateur par email
+    operationId: inviteToEvent
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [email]
+            properties:
+              email:
+                type: string
+                format: email
+    responses:
+      "201":
+        description: Invitation creee
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                event_id:
+                  type: string
+                  format: uuid
+                email:
+                  type: string
+                  format: email
+                status:
+                  type: string
+                  enum: [pending, accepted, declined]
+                user_id:
+                  type: integer
+                  nullable: true
+                created_at:
+                  type: string
+                  format: date-time
+                updated_at:
+                  type: string
+                  format: date-time
+      "400":
+        description: Email invalide
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ValidationErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/invitations/{invitationId}:
+  delete:
+    tags:
+      - Events
+    summary: Annuler une invitation (organisateur)
+    operationId: cancelInvitation
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Invitation annulee
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+      "400":
+        description: Invitation deja acceptee
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "403":
+        description: Non autorise (non proprietaire)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement ou invitation introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/join:
+  post:
+    tags:
+      - Events
+    summary: Accepter une invitation a un evenement
+    operationId: joinEvent
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              token:
+                type: string
+                description: Token d'invitation signe (optionnel mais recommande)
+    responses:
+      "200":
+        description: Invitation acceptee
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/InvitationActionResponse"
+      "400":
+        description: Invitation invalide ou deja utilisee
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/invitations/{invitationId}/decline:
+  patch:
+    tags:
+      - Events
+    summary: Refuser une invitation a un evenement
+    operationId: declineInvitation
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: invitationId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Invitation refusee
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/InvitationActionResponse"
+      "400":
+        description: Invitation non refusables
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Invitation introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/draw:
+  post:
+    tags:
+      - Events
+    summary: Lancer le tirage au sort
+    operationId: drawEvent
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Tirage effectue
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                message:
+                  type: string
+                count:
+                  type: integer
+      "403":
+        description: Seul l'organisateur peut lancer le tirage
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "400":
+        description: Erreur metier lors du tirage
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/my-assignment:
+  get:
+    tags:
+      - Events
+    summary: Recuperer mon assignation pour un evenement
+    operationId: getMyAssignment
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Assignation trouvee
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                receiverId:
+                  type: integer
+      "404":
+        description: Aucune assignation
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/exclusions:
+  get:
+    tags:
+      - Events
+    summary: Lister les exclusions d'un evenement
+    operationId: getEventExclusions
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      "200":
+        description: Exclusions recuperees
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: array
+                  items:
+                    $ref: "../openapi.yaml#/components/schemas/Exclusion"
+      "403":
+        description: Non autorise (non proprietaire)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+  patch:
+    tags:
+      - Events
+    summary: Ajouter une exclusion
+    operationId: addExclusion
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../openapi.yaml#/components/schemas/AddExclusionRequest"
+    responses:
+      "201":
+        description: Exclusion ajoutee
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: array
+                  items:
+                    $ref: "../openapi.yaml#/components/schemas/Exclusion"
+      "403":
+        description: Non autorise (non proprietaire)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "409":
+        description: Conflit (exclusion deja existante)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+
+/api/events/{id}/exclusions/{exclusionId}:
+  delete:
+    tags:
+      - Events
+    summary: Supprimer une exclusion
+    operationId: deleteExclusion
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: exclusionId
+        in: path
+        required: true
+        schema:
+          type: integer
+    responses:
+      "200":
+        description: Exclusion supprimee
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                message:
+                  type: string
+      "403":
+        description: Non autorise (non proprietaire)
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "404":
+        description: Evenement ou exclusion introuvable
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "500":
+        description: Erreur serveur
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+

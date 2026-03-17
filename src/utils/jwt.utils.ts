@@ -1,11 +1,13 @@
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import { UserWithoutPassword } from '../types/user.types';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh-secret-change-in-production';
 
-const ACCESS_TOKEN_EXPIRES_IN = '15m'; // 15 minutes
-const REFRESH_TOKEN_EXPIRES_IN = '7d'; // 7 jours
+const ACCESS_TOKEN_EXPIRES_IN = '7d';
+const REFRESH_TOKEN_EXPIRES_IN = '30d';
+const INVITATION_TOKEN_EXPIRES_IN: SignOptions['expiresIn'] =
+  (process.env.INVITATION_TOKEN_EXPIRES_IN as SignOptions['expiresIn']) || '7d';
 
 export interface AccessTokenPayload {
   userId: number;
@@ -16,6 +18,13 @@ export interface AccessTokenPayload {
 export interface RefreshTokenPayload {
   userId: number;
   type: 'refresh';
+}
+
+export interface InvitationTokenPayload {
+  invitationId: string;
+  eventId: string;
+  email: string;
+  type: 'invitation';
 }
 
 /**
@@ -44,6 +53,22 @@ export const signRefreshToken = (userId: number): string => {
 };
 
 /**
+ * Genere un token d'invitation
+ */
+export const signInvitationToken = (
+  payload: Omit<InvitationTokenPayload, 'type'>,
+): string => {
+  return jwt.sign(
+    {
+      ...payload,
+      type: 'invitation',
+    },
+    JWT_SECRET,
+    { expiresIn: INVITATION_TOKEN_EXPIRES_IN },
+  );
+};
+
+/**
  * Vérifie un Access Token
  */
 export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
@@ -60,6 +85,21 @@ export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
 export const verifyRefreshToken = (token: string): RefreshTokenPayload | null => {
   try {
     return jwt.verify(token, REFRESH_TOKEN_SECRET) as RefreshTokenPayload;
+  } catch (error) {
+    return null;
+  }
+};
+
+/**
+ * Verifie un token d'invitation
+ */
+export const verifyInvitationToken = (token: string): InvitationTokenPayload | null => {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as InvitationTokenPayload;
+    if (payload.type !== 'invitation') {
+      return null;
+    }
+    return payload;
   } catch (error) {
     return null;
   }

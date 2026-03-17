@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { createEventHandler, getEventHandler, updateEventHandler, deleteEventHandler, inviteUserHandler, joinEventHandler, drawEventHandler, getAssignmentHandler, getUserEventsHandler, getEventParticipantsHandler, getEventInvitationsHandler, deleteInvitationHandler, addExclusionHandler, getEventExclusionsHandler, deleteExclusionHandler } from '../controllers/event.controller';
+import { createEventHandler, getEventHandler, updateEventHandler, deleteEventHandler, inviteUserHandler, joinEventHandler, declineInvitationHandler, drawEventHandler, getAssignmentHandler, getUserEventsHandler, getEventParticipantsHandler, getEventInvitationsHandler, deleteInvitationHandler, addExclusionHandler, getEventExclusionsHandler, deleteExclusionHandler } from '../controllers/event.controller';
 import { authenticate } from '../middlewares/auth.middleware';
 
 const router: Router = Router();
@@ -16,6 +16,7 @@ router.delete('/:id', deleteEventHandler);
 router.post('/:id/invite', inviteUserHandler);
 router.delete('/:id/invitations/:invitationId', deleteInvitationHandler);
 router.post('/:id/join', joinEventHandler);
+router.patch('/:id/invitations/:invitationId/decline', declineInvitationHandler);
 router.post('/:id/draw', drawEventHandler);
 router.patch('/:id/exclusions', addExclusionHandler);
 router.get('/:id/exclusions', getEventExclusionsHandler);

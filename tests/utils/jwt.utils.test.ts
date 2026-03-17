@@ -1,4 +1,10 @@
-import { signAccessToken, verifyAccessToken, extractTokenFromHeader } from '../../src/utils/jwt.utils';
+import {
+  signAccessToken,
+  verifyAccessToken,
+  extractTokenFromHeader,
+  signInvitationToken,
+  verifyInvitationToken,
+} from '../../src/utils/jwt.utils';
 import { UserWithoutPassword } from '../../src/types/user.types';
 
 describe('JWT Utils', () => {
@@ -84,6 +90,28 @@ describe('JWT Utils', () => {
       const extracted = extractTokenFromHeader('');
 
       expect(extracted).toBeNull();
+    });
+  });
+
+  describe('invitation tokens', () => {
+    it('should sign and verify a valid invitation token', () => {
+      const token = signInvitationToken({
+        invitationId: 'inv-1',
+        eventId: 'event-1',
+        email: 'test@example.com',
+      });
+
+      const decoded = verifyInvitationToken(token);
+      expect(decoded).not.toBeNull();
+      expect(decoded?.invitationId).toBe('inv-1');
+      expect(decoded?.eventId).toBe('event-1');
+      expect(decoded?.email).toBe('test@example.com');
+      expect(decoded?.type).toBe('invitation');
+    });
+
+    it('should return null for an invalid invitation token', () => {
+      const decoded = verifyInvitationToken('invalid-token');
+      expect(decoded).toBeNull();
     });
   });
 });

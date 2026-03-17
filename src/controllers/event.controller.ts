@@ -1,10 +1,11 @@
 import { Request, Response } from 'express';
-import { addExclusion, createEvent, findEventById, updateEvent, deleteEvent, createInvitation, joinEvent, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, getEventExclusions, deleteExclusion } from '../services/event.service';
+import { addExclusion, createEvent, findEventById, updateEvent, deleteEvent, createInvitation, joinEvent, declineInvitation, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, getEventExclusions, deleteExclusion } from '../services/event.service';
 import { validateEventInput, updateEventSchema } from '../models/event.model';
 import { invitationSchema } from '../models/invitation.model';
 import { sendInvitationEmail, sendDrawResultEmail } from '../services/email.service';
-import { createNotification } from '../services/notification.service';
+import { createNotification, markInvitationNotificationAsRead, updateInvitationNotificationStatus } from '../services/notification.service';
 import { UserModel } from '../models/user.model';
+import { signInvitationToken, verifyInvitationToken } from '../utils/jwt.utils';
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
@@ -126,6 +127,11 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
     }
 
     const invitation = await createInvitation(eventId, parsed.data.email);
+    const invitationToken = signInvitationToken({
+      invitationId: invitation.id,
+      eventId,
+      email: parsed.data.email,
+    });
 
     // Créer une notification in-app si l'utilisateur invité existe déjà.
     const invitedUser = await UserModel.findByEmail(parsed.data.email);
@@ -139,6 +145,8 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
         metadata: {
           eventId,
           invitationId: invitation.id,
+          invitationToken,
+          invitationStatus: 'pending',
           invitedEmail: parsed.data.email,
         },
       });
@@ -146,7 +154,7 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
 
     // Envoyer l'email
     // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre)
-    const joinLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/events/${eventId}/join`;
+    const joinLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/events/${eventId}/join?token=${encodeURIComponent(invitationToken)}`;
     await sendInvitationEmail(parsed.data.email, 'Secret Santa Event', joinLink);
 
     res.status(201).json(invitation);
@@ -162,17 +170,77 @@ export const joinEventHandler = async (req: Request, res: Response) => {
     const { id: eventId } = req.params;
     const userId = (req as any).user.id;
     const email = (req as any).user.email;
+    const tokenFromBody = typeof req.body?.token === 'string' ? req.body.token : null;
+    const tokenFromQuery = typeof req.query?.token === 'string' ? req.query.token : null;
+    const rawToken = tokenFromBody || tokenFromQuery;
+    const invitationToken = rawToken?.trim() || null;
 
-    const result = await joinEvent(eventId, userId, email);
+    let invitationId: string | undefined;
+    let effectiveEmail = email;
+
+    if (invitationToken && invitationToken !== 'undefined' && invitationToken !== 'null') {
+      const tokenPayload = verifyInvitationToken(invitationToken);
+
+      if (!tokenPayload) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(invitationToken);
+        if (isUuid) {
+          invitationId = invitationToken;
+        } else {
+          return res.status(400).json({ success: false, message: 'Token d\'invitation invalide ou expiré.' });
+        }
+      } else {
+        if (tokenPayload.eventId !== eventId) {
+          return res.status(400).json({ success: false, message: 'Token d\'invitation invalide pour cet événement.' });
+        }
+
+        if (tokenPayload.email.toLowerCase() !== String(email).toLowerCase()) {
+          return res.status(403).json({ success: false, message: 'Ce token d\'invitation ne correspond pas à votre compte.' });
+        }
+
+        invitationId = tokenPayload.invitationId;
+        effectiveEmail = tokenPayload.email;
+      }
+    }
+
+    const result = await joinEvent(eventId, userId, effectiveEmail, undefined, invitationId);
 
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(result.statusCode ?? 400).json(result);
+    }
+
+    if (result.invitationId) {
+      await updateInvitationNotificationStatus(result.invitationId, userId, 'accepted');
+      await markInvitationNotificationAsRead(result.invitationId, userId);
     }
 
     res.status(200).json(result);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur serveur lors de la tentative de rejoindre l\'événement.' });
+  }
+};
+
+export const declineInvitationHandler = async (req: Request, res: Response) => {
+  try {
+    const { id: eventId, invitationId } = req.params;
+    const userId = (req as any).user.id;
+    const email = (req as any).user.email;
+
+    const result = await declineInvitation(eventId, invitationId, email);
+
+    if (!result.success) {
+      return res.status(result.statusCode ?? 400).json(result);
+    }
+
+    if (result.invitationId) {
+      await updateInvitationNotificationStatus(result.invitationId, userId, 'declined');
+      await markInvitationNotificationAsRead(result.invitationId, userId);
+    }
+
+    res.status(200).json(result);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur serveur lors de la tentative de refus de l\'invitation.' });
   }
 };
 

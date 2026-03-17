@@ -81,3 +81,61 @@ export const markAllNotificationsAsRead = async (
   return result.rowCount ?? 0;
 };
 
+/**
+ * Marque en lue une notification d'invitation ciblée via son invitationId en metadata
+ */
+export const markInvitationNotificationAsRead = async (
+  invitationId: string,
+  userId: number,
+  clientPool: typeof pool = pool
+): Promise<number> => {
+  const result = await clientPool.query(
+    `UPDATE notifications
+     SET is_read = true
+     WHERE user_id = $1
+       AND type = 'invitation'
+       AND is_read = false
+       AND metadata IS NOT NULL
+       AND metadata->>'invitationId' = $2`,
+    [userId, invitationId]
+  );
+
+  return result.rowCount ?? 0;
+};
+
+export type InvitationNotificationStatus = 'pending' | 'accepted' | 'declined';
+
+/**
+ * Met a jour le statut metier dans metadata pour la notification d'invitation
+ */
+export const updateInvitationNotificationStatus = async (
+  invitationId: string,
+  userId: number,
+  status: InvitationNotificationStatus,
+  clientPool: typeof pool = pool
+): Promise<number> => {
+  const respondedAt = status === 'pending' ? null : new Date().toISOString();
+
+  const result = await clientPool.query(
+    `UPDATE notifications
+     SET metadata = jsonb_set(
+        jsonb_set(
+          COALESCE(metadata, '{}'::jsonb),
+          '{invitationStatus}',
+          to_jsonb($3::text),
+          true
+        ),
+        '{respondedAt}',
+        CASE WHEN $4::text IS NULL THEN 'null'::jsonb ELSE to_jsonb($4::text) END,
+        true
+      )
+     WHERE user_id = $1
+       AND type = 'invitation'
+       AND metadata IS NOT NULL
+       AND metadata->>'invitationId' = $2`,
+    [userId, invitationId, status, respondedAt]
+  );
+
+  return result.rowCount ?? 0;
+};
+

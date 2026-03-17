@@ -50,26 +50,44 @@ export const createInvitation = async (eventId: string, email: string, clientPoo
   return result.rows[0];
 };
 
-export const joinEvent = async (eventId: string, userId: number, email: string, clientPool: typeof pool = pool): Promise<{ success: boolean; message: string }> => {
+export interface InvitationActionResult {
+  success: boolean;
+  message: string;
+  statusCode?: number;
+  invitationId?: string;
+}
+
+export const joinEvent = async (
+  eventId: string,
+  userId: number,
+  email: string,
+  clientPool: typeof pool = pool,
+  invitationId?: string
+): Promise<InvitationActionResult> => {
   // Vérifier si une invitation existe pour cet email
-  const invitationResult = await clientPool.query<InvitationRecord>(
-    'SELECT * FROM invitations WHERE event_id = $1 AND email = $2',
-    [eventId, email]
-  );
+  const invitationResult = invitationId
+    ? await clientPool.query<InvitationRecord>(
+      'SELECT * FROM invitations WHERE id = $1 AND event_id = $2 AND email = $3',
+      [invitationId, eventId, email]
+    )
+    : await clientPool.query<InvitationRecord>(
+      'SELECT * FROM invitations WHERE event_id = $1 AND email = $2',
+      [eventId, email]
+    );
 
   if (invitationResult.rows.length === 0) {
     // Optionnel : permettre de rejoindre sans invitation explicite si l'événement est public ?
     // Pour l'instant on requiert une invitation
-    return { success: false, message: 'Aucune invitation trouvée pour cet événement.' };
+    return { success: false, statusCode: 400, message: 'Aucune invitation trouvée pour cet événement.' };
   }
 
   const invitation = invitationResult.rows[0];
 
   if (invitation.status === 'accepted' && invitation.user_id) {
     if (invitation.user_id === userId) {
-      return { success: true, message: 'Vous avez déjà rejoint cet événement.' };
+      return { success: true, message: 'Vous avez déjà rejoint cet événement.', invitationId: invitation.id };
     }
-    return { success: false, message: 'Cette invitation a déjà été utilisée.' };
+    return { success: false, statusCode: 400, message: 'Cette invitation a déjà été utilisée.' };
   }
 
   // Mettre à jour l'invitation
@@ -80,7 +98,42 @@ export const joinEvent = async (eventId: string, userId: number, email: string, 
     [userId, invitation.id]
   );
 
-  return { success: true, message: 'Vous avez rejoint l\'événement avec succès !' };
+  return { success: true, message: 'Vous avez rejoint l\'événement avec succès !', invitationId: invitation.id };
+};
+
+export const declineInvitation = async (
+  eventId: string,
+  invitationId: string,
+  email: string,
+  clientPool: typeof pool = pool
+): Promise<InvitationActionResult> => {
+  const invitationResult = await clientPool.query<InvitationRecord>(
+    'SELECT * FROM invitations WHERE id = $1 AND event_id = $2 AND email = $3',
+    [invitationId, eventId, email]
+  );
+
+  if (invitationResult.rows.length === 0) {
+    return { success: false, statusCode: 404, message: 'Invitation non trouvée.' };
+  }
+
+  const invitation = invitationResult.rows[0];
+
+  if (invitation.status === 'accepted') {
+    return { success: false, statusCode: 400, message: 'Impossible de refuser une invitation déjà acceptée.' };
+  }
+
+  if (invitation.status === 'declined') {
+    return { success: true, message: 'Invitation déjà refusée.', invitationId: invitation.id };
+  }
+
+  await clientPool.query(
+    `UPDATE invitations
+     SET status = 'declined', user_id = NULL, updated_at = NOW()
+     WHERE id = $1`,
+    [invitation.id]
+  );
+
+  return { success: true, message: 'Invitation refusée avec succès.', invitationId: invitation.id };
 };
 
 export const findEventById = async (id: string, clientPool: typeof pool = pool): Promise<EventRecord | null> => {
