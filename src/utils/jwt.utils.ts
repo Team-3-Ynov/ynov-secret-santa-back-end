@@ -4,8 +4,10 @@ import { UserWithoutPassword } from '../types/user.types';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || 'refresh-secret-change-in-production';
 
-const ACCESS_TOKEN_EXPIRES_IN = '7d';
-const REFRESH_TOKEN_EXPIRES_IN = '30d';
+const ACCESS_TOKEN_EXPIRES_IN: SignOptions['expiresIn'] =
+  (process.env.ACCESS_TOKEN_EXPIRES_IN as SignOptions['expiresIn']) || '15m';
+const REFRESH_TOKEN_EXPIRES_IN: SignOptions['expiresIn'] =
+  (process.env.REFRESH_TOKEN_EXPIRES_IN as SignOptions['expiresIn']) || '7d';
 const INVITATION_TOKEN_EXPIRES_IN: SignOptions['expiresIn'] =
   (process.env.INVITATION_TOKEN_EXPIRES_IN as SignOptions['expiresIn']) || '7d';
 
@@ -28,7 +30,7 @@ export interface InvitationTokenPayload {
 }
 
 /**
- * Génère un Access Token (courte durée)
+ * Génère un Access Token (courte durée, par défaut 15 minutes, configurable via ACCESS_TOKEN_EXPIRES_IN)
  */
 export const signAccessToken = (user: UserWithoutPassword): string => {
   const payload: AccessTokenPayload = {
@@ -41,7 +43,7 @@ export const signAccessToken = (user: UserWithoutPassword): string => {
 };
 
 /**
- * Génère un Refresh Token (longue durée)
+ * Génère un Refresh Token (longue durée, par défaut 7 jours, configurable via REFRESH_TOKEN_EXPIRES_IN)
  */
 export const signRefreshToken = (userId: number): string => {
   const payload: RefreshTokenPayload = {
