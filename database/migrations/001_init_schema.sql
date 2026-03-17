@@ -1,6 +1,9 @@
 -- Initial Schema: Users, Events, Invitations, Assignments, Refresh Tokens
 -- Date: 2026-01-12
 
+-- Ensure pgcrypto is available for UUID generation functions like gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
