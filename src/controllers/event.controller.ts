@@ -7,6 +7,17 @@ import { createNotification, markInvitationNotificationAsRead, updateInvitationN
 import { UserModel } from '../models/user.model';
 import { signInvitationToken, verifyInvitationToken } from '../utils/jwt.utils';
 
+const joinEventForUser = (
+  eventId: string,
+  userId: string,
+  email: string,
+  invitationId?: string
+) => {
+  // Preserve existing behavior: pass `undefined` for the 4th argument (e.g. clientPool)
+  // and forward `invitationId` as the 5th argument.
+  return joinEvent(eventId, userId, email, undefined, invitationId);
+};
+
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
   const userId = (req as any).user?.id;
@@ -202,7 +213,7 @@ export const joinEventHandler = async (req: Request, res: Response) => {
       }
     }
 
-    const result = await joinEvent(eventId, userId, effectiveEmail, undefined, invitationId);
+    const result = await joinEventForUser(eventId, userId, effectiveEmail, invitationId);
 
     if (!result.success) {
       return res.status(result.statusCode ?? 400).json(result);
