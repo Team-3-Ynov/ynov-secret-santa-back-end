@@ -45,9 +45,9 @@ interface RouteInfo {
   tags: string[];
   summary: string;
   description?: string;
-  security?: any[];
-  requestBody?: any;
-  responses: Record<string, any>;
+  security?: unknown[];
+  requestBody?: unknown;
+  responses: Record<string, unknown>;
 }
 
 async function generateOpenAPISpec(): Promise<OpenAPISpec> {
