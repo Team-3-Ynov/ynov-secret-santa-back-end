@@ -1,26 +1,15 @@
-<<<<<<< feature/notifications
-import {
-  signAccessToken,
-  verifyAccessToken,
-  extractTokenFromHeader,
-  signInvitationToken,
-  verifyInvitationToken,
-} from '../../src/utils/jwt.utils';
-import { UserWithoutPassword } from '../../src/types/user.types';
-
-describe('JWT Utils', () => {
-=======
 import type { UserWithoutPassword } from "../../src/types/user.types";
 import {
   extractTokenFromHeader,
   signAccessToken,
   signRefreshToken,
+  signInvitationToken,
   verifyAccessToken,
   verifyRefreshToken,
+  verifyInvitationToken,
 } from "../../src/utils/jwt.utils";
 
 describe("JWT Utils", () => {
->>>>>>> main
   const mockUser: UserWithoutPassword = {
     id: 1,
     email: "test@example.com",
