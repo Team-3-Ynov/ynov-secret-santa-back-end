@@ -73,7 +73,23 @@ export const signInvitationToken = (
  */
 export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
   try {
-    return jwt.verify(token, JWT_SECRET) as AccessTokenPayload;
+    const payload = jwt.verify(token, JWT_SECRET);
+
+    if (!payload || typeof payload !== 'object') {
+      return null;
+    }
+
+    const typedPayload = payload as Partial<AccessTokenPayload> & { [key: string]: unknown };
+
+    if (typedPayload.type !== 'access') {
+      return null;
+    }
+
+    if (typeof typedPayload.userId !== 'number' || typeof typedPayload.email !== 'string') {
+      return null;
+    }
+
+    return typedPayload as AccessTokenPayload;
   } catch (error) {
     return null;
   }
