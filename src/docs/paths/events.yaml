@@ -528,6 +528,12 @@
           application/json:
             schema:
               $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
+      "403":
+        description: Non autorise - l'email du token d'invitation ne correspond pas a l'utilisateur authentifie
+        content:
+          application/json:
+            schema:
+              $ref: "../openapi.yaml#/components/schemas/ErrorResponse"
       "500":
         description: Erreur serveur
         content:
