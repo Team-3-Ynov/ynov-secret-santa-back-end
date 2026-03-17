@@ -280,10 +280,10 @@ components:
           example: invitation
         title:
           type: string
-          example: Invitation - Secret Santa Noel
+          example: Invitation - Secret Santa Noël
         message:
           type: string
-          example: Vous avez recu une nouvelle invitation.
+          example: Vous avez reçu une nouvelle invitation.
         is_read:
           type: boolean
           example: false
