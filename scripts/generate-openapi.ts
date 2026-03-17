@@ -5,7 +5,7 @@
  */
 
 import fs from "node:fs/promises";
-import { glob } from "glob";
+import { sync as globSync } from "glob";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
@@ -39,16 +39,6 @@ interface OpenAPISpec {
   };
 }
 
-interface RouteInfo {
-  path: string;
-  method: string;
-  tags: string[];
-  summary: string;
-  description?: string;
-  security?: unknown[];
-  requestBody?: unknown;
-  responses: Record<string, unknown>;
-}
 
 async function generateOpenAPISpec(): Promise<OpenAPISpec> {
   const spec: OpenAPISpec = {
@@ -103,10 +93,10 @@ async function generateOpenAPISpec(): Promise<OpenAPISpec> {
 
 async function loadSchemas(spec: OpenAPISpec): Promise<void> {
   // Charger les schémas depuis les fichiers TypeScript
-  const schemaFiles = await glob(path.join(__dirname, "../src/schemas/**/*.ts"));
+  const schemaFiles = globSync(path.join(__dirname, "../src/schemas/**/*.ts"));
 
   for (const file of schemaFiles) {
-    const content = await fs.readFile(file, "utf-8");
+    const _content = await fs.readFile(file, "utf-8");
     const filename = path.basename(file, ".ts");
 
     // Analyser le contenu pour extraire les interfaces
@@ -264,10 +254,10 @@ async function loadSchemas(spec: OpenAPISpec): Promise<void> {
 
 async function analyzeRoutes(spec: OpenAPISpec): Promise<void> {
   // Analyser les fichiers de routes
-  const routeFiles = await glob(path.join(__dirname, "../src/routes/**/*.ts"));
+  const routeFiles = globSync(path.join(__dirname, "../src/routes/**/*.ts"));
 
   for (const file of routeFiles) {
-    const content = await fs.readFile(file, "utf-8");
+    const _content = await fs.readFile(file, "utf-8");
     const filename = path.basename(file, ".ts");
 
     // Analyser le contenu pour extraire les routes
