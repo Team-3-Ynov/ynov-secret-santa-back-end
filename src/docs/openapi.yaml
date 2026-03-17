@@ -472,50 +472,6 @@ components:
           type: string
           format: uuid
 
-paths:
-# ═══════════════════════════════════════════════════════════════
-# Health
-# ═══════════════════════════════════════════════════════════════
-/health:
-  get:
-    tags: [Health]
-    summary: Vérifier l'état de l'API
-    responses:
-      200:
-        description: API en ligne
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/HealthResponse"
-
-# ═══════════════════════════════════════════════════════════════
-# Auth
-# ═══════════════════════════════════════════════════════════════
-/auth/register:
-  post:
-    tags: [Auth]
-    summary: Créer un nouveau compte
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: "#/components/schemas/RegisterRequest"
-    responses:
-      201:
-        description: Compte créé
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AuthResponse"
-      400:
-        description: Données invalides
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ValidationErrorResponse"
-
-/auth/login:
   post:
     tags: [Auth]
     summary: Se connecter
