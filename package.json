@@ -21,7 +21,7 @@
 		"format": "biome format --write .",
 		"docker:build": "docker build -f docker/Dockerfile -t secret-santa-backend .",
 		"docker:down": "docker compose down",
-		"prepare": "husky",
+		"prepare": "husky || echo 'husky not installed, skipping prepare'",
 		"generate:openapi": "tsx scripts/generate-openapi.ts",
 		"validate:openapi": "spectral lint src/docs/openapi.yaml"
 	},
