@@ -570,7 +570,7 @@
             schema:
               $ref: "../openapi.yaml#/components/schemas/InvitationActionResponse"
       "400":
-        description: Invitation non refusables
+        description: Invitation non refusable
         content:
           application/json:
             schema:
