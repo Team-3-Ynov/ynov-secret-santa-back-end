@@ -7,7 +7,7 @@
 import fs from "node:fs/promises";
 import { glob } from "glob";
 import path from "node:path";
-import { fileURLToPath } from "url";
+import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 
 // Convertir __dirname pour ES modules
@@ -32,10 +32,10 @@ interface OpenAPISpec {
     name: string;
     description: string;
   }>;
-  paths: Record<string, any>;
+  paths: Record<string, unknown>;
   components: {
-    securitySchemes: Record<string, any>;
-    schemas: Record<string, any>;
+    securitySchemes: Record<string, unknown>;
+    schemas: Record<string, unknown>;
   };
 }
 

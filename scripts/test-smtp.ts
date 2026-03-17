@@ -3,7 +3,7 @@ import 'dotenv/config';
 
 async function testSMTP() {
     const host = process.env.SMTP_HOST === 'localhost' ? '127.0.0.1' : (process.env.SMTP_HOST || '127.0.0.1');
-    const port = parseInt(process.env.SMTP_PORT || '1025');
+    const port = parseInt(process.env.SMTP_PORT || '1025', 10);
 
     console.log(`📡 Testing SMTP connectivity to ${host}:${port}...`);
 
