@@ -4,9 +4,9 @@
  * à partir des routes Express et des contrôleurs
  */
 
-import fs from "fs/promises";
+import fs from "node:fs/promises";
 import { glob } from "glob";
-import path from "path";
+import path from "node:path";
 import { fileURLToPath } from "url";
 import YAML from "yaml";
 
