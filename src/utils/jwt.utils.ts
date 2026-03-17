@@ -49,7 +49,7 @@ const isRefreshTokenPayload = (value: unknown): value is RefreshTokenPayload => 
 };
 
 /**
- * Génère un Access Token (courte durée, par défaut 15 minutes, configurable via ACCESS_TOKEN_EXPIRES_IN)
+ * Génère un Access Token (courte durée, par défaut 15 minutes).
  */
 export const signAccessToken = (user: UserWithoutPassword): string => {
   const payload: AccessTokenPayload = {
@@ -62,7 +62,7 @@ export const signAccessToken = (user: UserWithoutPassword): string => {
 };
 
 /**
- * Génère un Refresh Token (longue durée, par défaut 7 jours, configurable via REFRESH_TOKEN_EXPIRES_IN)
+ * Génère un Refresh Token (longue durée, par défaut 7 jours).
  */
 export const signRefreshToken = (userId: number): string => {
   const payload: RefreshTokenPayload = {
