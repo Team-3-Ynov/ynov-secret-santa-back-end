@@ -14,6 +14,7 @@ const REFRESH_TOKEN_SECRET = getRequiredEnv("REFRESH_TOKEN_SECRET");
 
 const ACCESS_TOKEN_EXPIRES_IN = "15m"; // 15 minutes
 const REFRESH_TOKEN_EXPIRES_IN = "7d"; // 7 jours
+const INVITATION_TOKEN_EXPIRES_IN = "7d"; // 7 jours (token d'invitation)
 
 export interface AccessTokenPayload {
   userId: number;
