@@ -7,6 +7,28 @@
 - [Events API](#events-api) - lifecycle, invitations, exclusions, draw
 - [Notifications API](#notifications-api) - list, unread count, read state
 
+## Activation Matrix
+
+- Context: Auth API
+- Roles: `backend-engineer.md`, `api-security-reviewer.md`
+- Tier 1 Skills: `03-security.md`, `05-api-standards.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/system/orchestrator.md`
+
+- Context: User API
+- Roles: `backend-engineer.md`
+- Tier 1 Skills: `05-api-standards.md`, `03-security.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/rules/tier-0/11-agent-behavior.md`
+
+- Context: Events API
+- Roles: `backend-engineer.md`, `api-security-reviewer.md`
+- Tier 1 Skills: `05-api-standards.md`, `04-database.md`, `03-security.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/system/auto-learning.md`
+
+- Context: Notifications API
+- Roles: `backend-engineer.md`, `api-security-reviewer.md`
+- Tier 1 Skills: `05-api-standards.md`, `03-security.md`
+- Core Rules: `.agent/system/alignment.md`, `.agent/rules/tier-0/11-agent-behavior.md`
+
 ## <section id="auth-api"> Auth API
 
 - Base path: `/api/auth`.

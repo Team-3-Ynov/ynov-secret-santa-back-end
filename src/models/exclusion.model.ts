@@ -1,5 +1,4 @@
-
-import { z } from 'zod';
+import { z } from "zod";
 
 export const exclusionSchema = z.object({
   id: z.number(),

@@ -48,4 +48,3 @@ export interface AuthResponse {
   user: UserWithoutPassword;
   token: string;
 }
-

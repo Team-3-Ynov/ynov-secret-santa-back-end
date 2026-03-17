@@ -9,7 +9,6 @@ dist/
 
 # IDE
 .idea/
-.vscode/
 
 # OS
 .DS_Store
@@ -22,3 +21,6 @@ npm-debug.log*
 
 # Test coverage
 coverage/
+
+# Security scan artifacts
+semgrep.json

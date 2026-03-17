@@ -1,9 +1,12 @@
 -- Initial Schema: Users, Events, Invitations, Assignments, Refresh Tokens
 -- Date: 2026-01-12
 
+<<<<<<< feature/notifications
 -- Ensure pgcrypto is available for UUID generation functions like gen_random_uuid()
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+=======
+>>>>>>> main
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -83,7 +86,11 @@ CREATE TABLE IF NOT EXISTS assignments (
     receiver_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+<<<<<<< feature/notifications
     
+=======
+
+>>>>>>> main
     UNIQUE(event_id, giver_id),
     UNIQUE(event_id, receiver_id),
     CHECK (giver_id <> receiver_id)
@@ -110,4 +117,8 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 );
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token);
+<<<<<<< feature/notifications
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+=======
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+>>>>>>> main

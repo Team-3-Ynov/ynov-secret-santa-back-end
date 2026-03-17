@@ -63,11 +63,16 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: 🔍 Security audit
-        run: pnpm audit --audit-level=high || true
-        continue-on-error: true
+        run: pnpm audit --audit-level=high
 
       - name: 🔨 Build TypeScript
         run: pnpm build
+
+      - name: 🧹 Lint code
+        run: pnpm lint
+
+      - name: 📏 Typecheck
+        run: pnpm typecheck
 
       - name: 🧪 Run tests
         run: pnpm test --coverage
@@ -90,6 +95,24 @@ jobs:
         with:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
+
+      - name: 🔐 Check SonarQube secrets
+        id: sonar-secrets
+        if: always()
+        run: |
+          if [ -n "${{ secrets.SONARQUBE_URL }}" ] && [ -n "${{ secrets.SONARQUBE_TOKEN }}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "⚠️ SonarQube secrets missing, skipping SonarQube scan" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: 🔍 SonarQube Scan
+        if: always() && steps.sonar-secrets.outputs.enabled == 'true'
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_HOST_URL: ${{ secrets.SONARQUBE_URL }}
+          SONAR_TOKEN: ${{ secrets.SONARQUBE_TOKEN }}
 
       - name: 📋 Test Summary
         if: always()

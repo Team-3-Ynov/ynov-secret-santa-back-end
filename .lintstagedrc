@@ -1,0 +1,10 @@
+{
+  "*.{ts,tsx,js,jsx}": [
+    "pnpm lint",
+    "pnpm typecheck",
+    "semgrep scan --config auto --quiet"
+  ],
+  "*.{md,json,yaml,yml}": [
+    "pnpm lint"
+  ]
+}
