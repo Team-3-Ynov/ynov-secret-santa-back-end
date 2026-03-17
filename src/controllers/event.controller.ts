@@ -1,4 +1,3 @@
-<<<<<<< feature/notifications
 import { Request, Response } from 'express';
 import { addExclusion, createEvent, findEventById, updateEvent, deleteEvent, createInvitation, joinEvent, declineInvitation, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, getEventExclusions, deleteExclusion } from '../services/event.service';
 import { validateEventInput, updateEventSchema } from '../models/event.model';
@@ -233,7 +232,6 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
 export const joinEventHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId } = req.params;
-<<<<<<< feature/notifications
     const userId = (req as any).user.id;
     const email = (req as any).user.email;
     const tokenFromBody = typeof req.body?.token === 'string' ? req.body.token : null;
@@ -269,13 +267,6 @@ export const joinEventHandler = async (req: Request, res: Response) => {
     }
 
     const result = await joinEventForUser(eventId, userId, effectiveEmail, invitationId);
-=======
-    const userId = (req as AuthenticatedRequest).user.id;
-    const email = (req as AuthenticatedRequest).user.email;
-
-    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
-    const result = await joinEvent(eventIdStr, userId, email);
->>>>>>> main
 
     const { statusCode, ...responseBody } = result as any;
     if (!result.success) {
