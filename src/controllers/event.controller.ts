@@ -164,8 +164,8 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
     }
 
     // Envoyer l'email
-    // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre)
-    const joinLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/events/${eventId}/join?token=${encodeURIComponent(invitationToken)}`;
+    // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre, transmis côté frontend via fragment)
+    const joinLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/events/${eventId}/join#token=${encodeURIComponent(invitationToken)}`;
     await sendInvitationEmail(parsed.data.email, 'Secret Santa Event', joinLink);
 
     res.status(201).json(invitation);
