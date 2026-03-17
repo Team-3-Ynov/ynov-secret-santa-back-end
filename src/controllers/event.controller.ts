@@ -215,8 +215,9 @@ export const joinEventHandler = async (req: Request, res: Response) => {
 
     const result = await joinEventForUser(eventId, userId, effectiveEmail, invitationId);
 
+    const { statusCode, ...responseBody } = result as any;
     if (!result.success) {
-      return res.status(result.statusCode ?? 400).json(result);
+      return res.status(statusCode ?? 400).json(responseBody);
     }
 
     if (result.invitationId) {
