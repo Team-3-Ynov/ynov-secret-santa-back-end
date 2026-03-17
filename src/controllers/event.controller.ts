@@ -241,7 +241,8 @@ export const declineInvitationHandler = async (req: Request, res: Response) => {
     const result = await declineInvitation(eventId, invitationId, email);
 
     if (!result.success) {
-      return res.status(result.statusCode ?? 400).json(result);
+      const { statusCode, ...responseBody } = result;
+      return res.status(statusCode ?? 400).json(responseBody);
     }
 
     if (result.invitationId) {
@@ -249,7 +250,8 @@ export const declineInvitationHandler = async (req: Request, res: Response) => {
       await markInvitationNotificationAsRead(result.invitationId, userId);
     }
 
-    res.status(200).json(result);
+    const { statusCode, ...responseBody } = result;
+    res.status(200).json(responseBody);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Erreur serveur lors de la tentative de refus de l\'invitation.' });
