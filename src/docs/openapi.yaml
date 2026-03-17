@@ -335,7 +335,7 @@ components:
           example: true
         message:
           type: string
-          example: Invitation refusee avec succes.
+          example: Invitation refusée avec succès.
         invitationId:
           type: string
           format: uuid
