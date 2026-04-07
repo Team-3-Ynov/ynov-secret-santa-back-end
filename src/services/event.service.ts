@@ -116,7 +116,11 @@ export const joinEvent = async (
     [userId, invitation.id]
   );
 
-  return { success: true, message: 'Vous avez rejoint l\'événement avec succès !', invitationId: invitation.id };
+  return {
+    success: true,
+    message: "Vous avez rejoint l'événement avec succès !",
+    invitationId: invitation.id,
+  };
 };
 
 export const declineInvitation = async (
@@ -126,22 +130,26 @@ export const declineInvitation = async (
   clientPool: typeof pool = pool
 ): Promise<InvitationActionResult> => {
   const invitationResult = await clientPool.query<InvitationRecord>(
-    'SELECT * FROM invitations WHERE id = $1 AND event_id = $2 AND email = $3',
+    "SELECT * FROM invitations WHERE id = $1 AND event_id = $2 AND email = $3",
     [invitationId, eventId, email]
   );
 
   if (invitationResult.rows.length === 0) {
-    return { success: false, statusCode: 404, message: 'Invitation non trouvée.' };
+    return { success: false, statusCode: 404, message: "Invitation non trouvée." };
   }
 
   const invitation = invitationResult.rows[0];
 
-  if (invitation.status === 'accepted') {
-    return { success: false, statusCode: 400, message: 'Impossible de refuser une invitation déjà acceptée.' };
+  if (invitation.status === "accepted") {
+    return {
+      success: false,
+      statusCode: 400,
+      message: "Impossible de refuser une invitation déjà acceptée.",
+    };
   }
 
-  if (invitation.status === 'declined') {
-    return { success: true, message: 'Invitation déjà refusée.', invitationId: invitation.id };
+  if (invitation.status === "declined") {
+    return { success: true, message: "Invitation déjà refusée.", invitationId: invitation.id };
   }
 
   await clientPool.query(

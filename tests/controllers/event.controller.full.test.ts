@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import { type Mock, vi } from "vitest";
-import type { AuthenticatedRequest } from "../../src/middlewares/auth.middleware";
 import {
   addExclusionHandler,
   createEventHandler,
@@ -18,9 +17,10 @@ import {
   joinEventHandler,
   updateEventHandler,
 } from "../../src/controllers/event.controller";
+import type { AuthenticatedRequest } from "../../src/middlewares/auth.middleware";
+import { UserModel } from "../../src/models/user.model";
 import * as emailService from "../../src/services/email.service";
 import * as eventService from "../../src/services/event.service";
-import { UserModel } from "../../src/models/user.model";
 import * as notificationService from "../../src/services/notification.service";
 
 vi.mock("../../src/services/event.service");

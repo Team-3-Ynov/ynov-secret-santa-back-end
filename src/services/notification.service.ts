@@ -109,7 +109,7 @@ export const markInvitationNotificationAsRead = async (
   return result.rowCount ?? 0;
 };
 
-export type InvitationNotificationStatus = 'pending' | 'accepted' | 'declined';
+export type InvitationNotificationStatus = "pending" | "accepted" | "declined";
 
 /**
  * Met a jour le statut metier dans metadata pour la notification d'invitation
@@ -120,7 +120,7 @@ export const updateInvitationNotificationStatus = async (
   status: InvitationNotificationStatus,
   clientPool: typeof pool = pool
 ): Promise<number> => {
-  const respondedAt = status === 'pending' ? null : new Date().toISOString();
+  const respondedAt = status === "pending" ? null : new Date().toISOString();
 
   const result = await clientPool.query(
     `UPDATE notifications
@@ -144,4 +144,3 @@ export const updateInvitationNotificationStatus = async (
 
   return result.rowCount ?? 0;
 };
-

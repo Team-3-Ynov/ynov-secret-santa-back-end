@@ -31,7 +31,7 @@ export interface InvitationTokenPayload {
   invitationId: string;
   eventId: string;
   email: string;
-  type: 'invitation';
+  type: "invitation";
 }
 const isAccessTokenPayload = (value: unknown): value is AccessTokenPayload => {
   if (!value || typeof value !== "object") return false;
@@ -79,16 +79,14 @@ export const signRefreshToken = (userId: number): string => {
 /**
  * Genere un token d'invitation
  */
-export const signInvitationToken = (
-  payload: Omit<InvitationTokenPayload, 'type'>,
-): string => {
+export const signInvitationToken = (payload: Omit<InvitationTokenPayload, "type">): string => {
   return jwt.sign(
     {
       ...payload,
-      type: 'invitation',
+      type: "invitation",
     },
     JWT_SECRET,
-    { expiresIn: INVITATION_TOKEN_EXPIRES_IN },
+    { expiresIn: INVITATION_TOKEN_EXPIRES_IN }
   );
 };
 
@@ -99,21 +97,7 @@ export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
 
-    if (!payload || typeof payload !== 'object') {
-      return null;
-    }
-
-    const typedPayload = payload as Partial<AccessTokenPayload> & { [key: string]: unknown };
-
-    if (typedPayload.type !== 'access') {
-      return null;
-    }
-
-    if (typeof typedPayload.userId !== 'number' || typeof typedPayload.email !== 'string') {
-      return null;
-    }
-
-    return typedPayload as AccessTokenPayload;
+    return isAccessTokenPayload(payload) ? payload : null;
   } catch {
     return null;
   }
@@ -137,11 +121,14 @@ export const verifyRefreshToken = (token: string): RefreshTokenPayload | null =>
 export const verifyInvitationToken = (token: string): InvitationTokenPayload | null => {
   try {
     const payload = jwt.verify(token, JWT_SECRET) as InvitationTokenPayload;
-    if (payload.type !== 'invitation') {
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+    if (payload.type !== "invitation") {
       return null;
     }
     return payload;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
