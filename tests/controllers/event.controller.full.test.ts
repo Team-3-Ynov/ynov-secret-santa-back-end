@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { type Mock, vi } from "vitest";
+import type { AuthenticatedRequest } from "../../src/middlewares/auth.middleware";
 import {
   addExclusionHandler,
   createEventHandler,
@@ -19,14 +20,20 @@ import {
 } from "../../src/controllers/event.controller";
 import * as emailService from "../../src/services/email.service";
 import * as eventService from "../../src/services/event.service";
+import { UserModel } from "../../src/models/user.model";
 import * as notificationService from "../../src/services/notification.service";
 
 vi.mock("../../src/services/event.service");
 vi.mock("../../src/services/email.service");
 vi.mock("../../src/services/notification.service");
+vi.mock("../../src/models/user.model", () => ({
+  UserModel: {
+    findByEmail: vi.fn(),
+  },
+}));
 
 describe("event.controller full coverage", () => {
-  let req: Partial<Request>;
+  let req: Partial<AuthenticatedRequest>;
   let res: Partial<Response>;
   let jsonMock: Mock;
   let statusMock: Mock;
@@ -38,9 +45,10 @@ describe("event.controller full coverage", () => {
       params: { id: "evt-1", invitationId: "inv-1" },
       body: {},
       user: { id: 1, email: "owner@example.com" },
-    } as unknown as Request;
+    } as Partial<AuthenticatedRequest>;
     res = { status: statusMock, json: jsonMock } as unknown as Response;
     vi.clearAllMocks();
+    (UserModel.findByEmail as Mock).mockResolvedValue(null);
   });
 
   describe("getEventHandler", () => {

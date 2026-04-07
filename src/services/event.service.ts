@@ -68,13 +68,19 @@ export const joinEvent = async (
   eventId: string,
   userId: number,
   email: string,
-  clientPool: typeof pool = pool
-): Promise<{ success: boolean; message: string }> => {
+  clientPool: typeof pool = pool,
+  invitationId?: string
+): Promise<InvitationActionResult> => {
   // Vérifier si une invitation existe pour cet email
-  const invitationResult = await clientPool.query<InvitationRecord>(
-    "SELECT * FROM invitations WHERE event_id = $1 AND email = $2",
-    [eventId, email]
-  );
+  const invitationResult = invitationId
+    ? await clientPool.query<InvitationRecord>(
+        "SELECT * FROM invitations WHERE id = $1 AND event_id = $2 AND email = $3",
+        [invitationId, eventId, email]
+      )
+    : await clientPool.query<InvitationRecord>(
+        "SELECT * FROM invitations WHERE event_id = $1 AND email = $2",
+        [eventId, email]
+      );
 
   if (invitationResult.rows.length === 0) {
     // Optionnel : permettre de rejoindre sans invitation explicite si l'événement est public ?

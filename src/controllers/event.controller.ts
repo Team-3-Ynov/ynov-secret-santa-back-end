@@ -1,32 +1,14 @@
-import { Request, Response } from 'express';
-import { addExclusion, createEvent, findEventById, updateEvent, deleteEvent, createInvitation, joinEvent, declineInvitation, performDraw, getAssignment, getEventsByUserId, getEventParticipants, getEventInvitations, findInvitationById, deleteInvitation, getEventExclusions, deleteExclusion } from '../services/event.service';
-import { validateEventInput, updateEventSchema } from '../models/event.model';
-import { invitationSchema } from '../models/invitation.model';
-import { sendInvitationEmail, sendDrawResultEmail } from '../services/email.service';
-import { createNotification, markInvitationNotificationAsRead, updateInvitationNotificationStatus } from '../services/notification.service';
-import { UserModel } from '../models/user.model';
-import { signInvitationToken, verifyInvitationToken } from '../utils/jwt.utils';
-
-const joinEventForUser = (
-  eventId: string,
-  userId: string,
-  email: string,
-  invitationId?: string
-) => {
-  // Preserve existing behavior: pass `undefined` for the 4th argument (e.g. clientPool)
-  // and forward `invitationId` as the 5th argument.
-  return joinEvent(eventId, userId, email, undefined, invitationId);
-};
-=======
 import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { updateEventSchema, validateEventInput } from "../models/event.model";
 import { invitationSchema } from "../models/invitation.model";
+import { UserModel } from "../models/user.model";
 import { sendDrawResultEmail, sendInvitationEmail } from "../services/email.service";
 import {
   addExclusion,
   createEvent,
   createInvitation,
+  declineInvitation,
   deleteEvent,
   deleteExclusion,
   deleteInvitation,
@@ -41,8 +23,19 @@ import {
   performDraw,
   updateEvent,
 } from "../services/event.service";
-import { createNotification } from "../services/notification.service";
->>>>>>> main
+import {
+  createNotification,
+  markInvitationNotificationAsRead,
+  updateInvitationNotificationStatus,
+} from "../services/notification.service";
+import { signInvitationToken, verifyInvitationToken } from "../utils/jwt.utils";
+
+const joinEventForUser = (
+  eventId: string,
+  userId: number,
+  email: string,
+  invitationId?: string
+) => joinEvent(eventId, userId, email, undefined, invitationId);
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
@@ -181,25 +174,25 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
       return;
     }
 
-<<<<<<< feature/notifications
-    const invitation = await createInvitation(eventId, parsed.data.email);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const invitation = await createInvitation(eventIdStr, parsed.data.email);
     const invitationToken = signInvitationToken({
       invitationId: invitation.id,
-      eventId,
+      eventId: eventIdStr,
       email: parsed.data.email,
     });
 
     // Créer une notification in-app si l'utilisateur invité existe déjà.
     const invitedUser = await UserModel.findByEmail(parsed.data.email);
     if (invitedUser && invitedUser.id !== inviter?.id) {
-      const event = await findEventById(eventId);
+      const event = await findEventById(eventIdStr);
       await createNotification({
         userId: invitedUser.id,
         type: 'invitation',
         title: `Invitation - ${event?.title || 'Secret Santa'}`,
         message: `${inviter?.username || inviter?.email || 'Un organisateur'} vous a invité(e) à rejoindre un Secret Santa.`,
         metadata: {
-          eventId,
+          eventId: eventIdStr,
           invitationId: invitation.id,
           invitationToken,
           invitationStatus: 'pending',
@@ -210,17 +203,8 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
 
     // Envoyer l'email
     // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre, transmis côté frontend via fragment)
-    const joinLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/events/${eventId}/join#token=${encodeURIComponent(invitationToken)}`;
+    const joinLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/events/${eventIdStr}/join#token=${encodeURIComponent(invitationToken)}`;
     await sendInvitationEmail(parsed.data.email, 'Secret Santa Event', joinLink);
-=======
-    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
-    const invitation = await createInvitation(eventIdStr, parsed.data.email);
-
-    // Envoyer l'email
-    // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre)
-    const joinLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/events/${eventId}/join`;
-    await sendInvitationEmail(parsed.data.email, "Secret Santa Event", joinLink);
->>>>>>> main
 
     res.status(201).json(invitation);
   } catch (error) {

@@ -114,9 +114,6 @@ export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
     }
 
     return typedPayload as AccessTokenPayload;
-  } catch (error) {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return isAccessTokenPayload(decoded) ? decoded : null;
   } catch {
     return null;
   }
