@@ -2,11 +2,13 @@ import type { Request, Response } from "express";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { updateEventSchema, validateEventInput } from "../models/event.model";
 import { invitationSchema } from "../models/invitation.model";
+import { UserModel } from "../models/user.model";
 import { sendDrawResultEmail, sendInvitationEmail } from "../services/email.service";
 import {
   addExclusion,
   createEvent,
   createInvitation,
+  declineInvitation,
   deleteEvent,
   deleteExclusion,
   deleteInvitation,
@@ -17,11 +19,21 @@ import {
   getEventInvitations,
   getEventParticipants,
   getEventsByUserId,
+  type InvitationActionResult,
   joinEvent,
   performDraw,
   updateEvent,
 } from "../services/event.service";
-import { createNotification } from "../services/notification.service";
+import {
+  createNotification,
+  markInvitationNotificationAsRead,
+  updateInvitationNotificationStatus,
+} from "../services/notification.service";
+import { signInvitationToken } from "../utils/jwt.utils";
+
+type RequestWithOptionalUsername = AuthenticatedRequest & {
+  user: AuthenticatedRequest["user"] & { username?: string };
+};
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
@@ -148,6 +160,7 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId } = req.params;
     const { email } = req.body;
+    const inviter = (req as RequestWithOptionalUsername).user;
 
     const parsed = invitationSchema.safeParse({ email });
 
@@ -161,6 +174,30 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
 
     const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
     const invitation = await createInvitation(eventIdStr, parsed.data.email);
+    const invitationToken = signInvitationToken({
+      invitationId: invitation.id,
+      eventId: eventIdStr,
+      email: parsed.data.email,
+    });
+
+    // Créer une notification in-app si l'utilisateur invité existe déjà.
+    const invitedUser = await UserModel.findByEmail(parsed.data.email);
+    if (invitedUser && invitedUser.id !== inviter?.id) {
+      const event = await findEventById(eventIdStr);
+      await createNotification({
+        userId: invitedUser.id,
+        type: "invitation",
+        title: `Invitation - ${event?.title || "Secret Santa"}`,
+        message: `${inviter?.username || inviter?.email || "Un organisateur"} vous a invité(e) à rejoindre un Secret Santa.`,
+        metadata: {
+          eventId: eventIdStr,
+          invitationId: invitation.id,
+          invitationToken,
+          invitationStatus: "pending",
+          invitedEmail: parsed.data.email,
+        },
+      });
+    }
 
     // Envoyer l'email avec un token d'invitation dans l'URL pour le flux frontend.
     const joinLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/events/${eventIdStr}/join?token=${encodeURIComponent(invitation.id)}`;
@@ -177,16 +214,24 @@ export const joinEventHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId } = req.params;
     const userId = (req as AuthenticatedRequest).user.id;
+    const tokenFromBody = typeof req.body?.token === "string" ? req.body.token : null;
+    const tokenFromQuery = typeof req.query?.token === "string" ? req.query.token : null;
+    const normalizedToken = (tokenFromBody || tokenFromQuery)?.trim();
     const invitationToken =
-      typeof req.body?.token === "string" && req.body.token.trim().length > 0
-        ? req.body.token.trim()
+      normalizedToken && normalizedToken !== "undefined" && normalizedToken !== "null"
+        ? normalizedToken
         : undefined;
 
     const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
-    const result = await joinEvent(eventIdStr, userId, invitationToken);
-
+    const result: InvitationActionResult = await joinEvent(eventIdStr, userId, invitationToken);
+    const { statusCode, ...responseBody } = result;
     if (!result.success) {
-      return res.status(400).json(result);
+      return res.status(statusCode ?? 400).json(responseBody);
+    }
+
+    if (result.invitationId) {
+      await updateInvitationNotificationStatus(result.invitationId, userId, "accepted");
+      await markInvitationNotificationAsRead(result.invitationId, userId);
     }
 
     res.status(200).json(result);
@@ -195,6 +240,35 @@ export const joinEventHandler = async (req: Request, res: Response) => {
     res.status(500).json({
       message: "Erreur serveur lors de la tentative de rejoindre l'événement.",
     });
+  }
+};
+
+export const declineInvitationHandler = async (req: Request, res: Response) => {
+  try {
+    const { id: eventId, invitationId } = req.params;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user.id;
+    const email = authReq.user.email;
+
+    const result = await declineInvitation(eventId, invitationId, email);
+
+    if (!result.success) {
+      const { statusCode, ...responseBody } = result;
+      return res.status(statusCode ?? 400).json(responseBody);
+    }
+
+    if (result.invitationId) {
+      await updateInvitationNotificationStatus(result.invitationId, userId, "declined");
+      await markInvitationNotificationAsRead(result.invitationId, userId);
+    }
+
+    const { statusCode, ...responseBody } = result;
+    res.status(200).json(responseBody);
+  } catch (error) {
+    console.error(error);
+    res
+      .status(500)
+      .json({ message: "Erreur serveur lors de la tentative de refus de l'invitation." });
   }
 };
 

@@ -14,6 +14,7 @@ const REFRESH_TOKEN_SECRET = getRequiredEnv("REFRESH_TOKEN_SECRET");
 
 const ACCESS_TOKEN_EXPIRES_IN = "15m"; // 15 minutes
 const REFRESH_TOKEN_EXPIRES_IN = "7d"; // 7 jours
+const INVITATION_TOKEN_EXPIRES_IN = "7d"; // 7 jours (token d'invitation)
 
 export interface AccessTokenPayload {
   userId: number;
@@ -26,6 +27,12 @@ export interface RefreshTokenPayload {
   type: "refresh";
 }
 
+export interface InvitationTokenPayload {
+  invitationId: string;
+  eventId: string;
+  email: string;
+  type: "invitation";
+}
 const isAccessTokenPayload = (value: unknown): value is AccessTokenPayload => {
   if (!value || typeof value !== "object") return false;
   const payload = value as Record<string, unknown>;
@@ -43,7 +50,7 @@ const isRefreshTokenPayload = (value: unknown): value is RefreshTokenPayload => 
 };
 
 /**
- * Génère un Access Token (courte durée)
+ * Génère un Access Token (courte durée, par défaut 15 minutes).
  */
 export const signAccessToken = (user: UserWithoutPassword): string => {
   const payload: AccessTokenPayload = {
@@ -56,7 +63,7 @@ export const signAccessToken = (user: UserWithoutPassword): string => {
 };
 
 /**
- * Génère un Refresh Token (longue durée)
+ * Génère un Refresh Token (longue durée, par défaut 7 jours).
  */
 export const signRefreshToken = (userId: number): string => {
   const payload: RefreshTokenPayload = {
@@ -70,12 +77,27 @@ export const signRefreshToken = (userId: number): string => {
 };
 
 /**
+ * Genere un token d'invitation
+ */
+export const signInvitationToken = (payload: Omit<InvitationTokenPayload, "type">): string => {
+  return jwt.sign(
+    {
+      ...payload,
+      type: "invitation",
+    },
+    JWT_SECRET,
+    { expiresIn: INVITATION_TOKEN_EXPIRES_IN }
+  );
+};
+
+/**
  * Vérifie un Access Token
  */
 export const verifyAccessToken = (token: string): AccessTokenPayload | null => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    return isAccessTokenPayload(decoded) ? decoded : null;
+    const payload = jwt.verify(token, JWT_SECRET);
+
+    return isAccessTokenPayload(payload) ? payload : null;
   } catch {
     return null;
   }
@@ -88,6 +110,24 @@ export const verifyRefreshToken = (token: string): RefreshTokenPayload | null =>
   try {
     const decoded = jwt.verify(token, REFRESH_TOKEN_SECRET);
     return isRefreshTokenPayload(decoded) ? decoded : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Verifie un token d'invitation
+ */
+export const verifyInvitationToken = (token: string): InvitationTokenPayload | null => {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as InvitationTokenPayload;
+    if (!payload || typeof payload !== "object") {
+      return null;
+    }
+    if (payload.type !== "invitation") {
+      return null;
+    }
+    return payload;
   } catch {
     return null;
   }

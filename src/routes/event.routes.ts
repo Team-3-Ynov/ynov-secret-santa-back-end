@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   addExclusionHandler,
   createEventHandler,
+  declineInvitationHandler,
   deleteEventHandler,
   deleteExclusionHandler,
   deleteInvitationHandler,
@@ -32,6 +33,7 @@ router.delete("/:id", deleteEventHandler);
 router.post("/:id/invite", inviteUserHandler);
 router.delete("/:id/invitations/:invitationId", deleteInvitationHandler);
 router.post("/:id/join", joinEventHandler);
+router.patch("/:id/invitations/:invitationId/decline", declineInvitationHandler);
 router.post("/:id/draw", drawEventHandler);
 router.patch("/:id/exclusions", addExclusionHandler);
 router.get("/:id/exclusions", getEventExclusionsHandler);
