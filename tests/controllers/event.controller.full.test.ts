@@ -207,7 +207,11 @@ describe("event.controller full coverage", () => {
       await inviteUserHandler(req as Request, res as Response);
 
       expect(eventService.createInvitation).toHaveBeenCalledWith("evt-1", "test@example.com");
-      expect(emailService.sendInvitationEmail).toHaveBeenCalled();
+      expect(emailService.sendInvitationEmail).toHaveBeenCalledWith(
+        "test@example.com",
+        "Secret Santa Event",
+        expect.stringContaining("/events/evt-1/join?token=inv-1")
+      );
       expect(statusMock).toHaveBeenCalledWith(201);
     });
 
@@ -244,6 +248,15 @@ describe("event.controller full coverage", () => {
       await joinEventHandler(req as Request, res as Response);
 
       expect(statusMock).toHaveBeenCalledWith(500);
+    });
+
+    it("passes invitation token to service when provided", async () => {
+      req.body = { token: "inv-token-1" };
+      (eventService.joinEvent as Mock).mockResolvedValue({ success: true });
+
+      await joinEventHandler(req as Request, res as Response);
+
+      expect(eventService.joinEvent).toHaveBeenCalledWith("evt-1", 1, "inv-token-1");
     });
   });
 

@@ -67,19 +67,24 @@ export interface InvitationActionResult {
 export const joinEvent = async (
   eventId: string,
   userId: number,
-  email: string,
-  clientPool: typeof pool = pool,
-  invitationId?: string
+  invitationTokenOrPool?: string | typeof pool,
+  clientPool: typeof pool = pool
 ): Promise<InvitationActionResult> => {
-  // Vérifier si une invitation existe pour cet email
-  const invitationResult = invitationId
-    ? await clientPool.query<InvitationRecord>(
-        "SELECT * FROM invitations WHERE id = $1 AND event_id = $2 AND email = $3",
-        [invitationId, eventId, email]
+  const invitationToken =
+    typeof invitationTokenOrPool === "string" ? invitationTokenOrPool : undefined;
+  const resolvedPool =
+    typeof invitationTokenOrPool === "string" ? clientPool : invitationTokenOrPool || clientPool;
+
+  // Priorité au token d'invitation quand il est présent.
+  // Sinon fallback sur user_id pour les comptes ayant déjà rejoint l'événement.
+  const invitationResult = invitationToken
+    ? await resolvedPool.query<InvitationRecord>(
+        "SELECT * FROM invitations WHERE id = $1 AND event_id = $2",
+        [invitationToken, eventId]
       )
-    : await clientPool.query<InvitationRecord>(
-        "SELECT * FROM invitations WHERE event_id = $1 AND email = $2",
-        [eventId, email]
+    : await resolvedPool.query<InvitationRecord>(
+        "SELECT * FROM invitations WHERE event_id = $1 AND user_id = $2",
+        [eventId, userId]
       );
 
   if (invitationResult.rows.length === 0) {
@@ -104,7 +109,7 @@ export const joinEvent = async (
   }
 
   // Mettre à jour l'invitation
-  await clientPool.query(
+  await resolvedPool.query(
     `UPDATE invitations 
      SET status = 'accepted', user_id = $1, updated_at = NOW() 
      WHERE id = $2`,

@@ -90,7 +90,7 @@ describe("EventService - Unified Dependency Injection Tests", () => {
     it("should fail when no invitation exists", async () => {
       mockPoolQuery.mockResolvedValueOnce({ rows: [] });
 
-      const result = await joinEvent("event-1", 1, "test@test.com", mockPool);
+      const result = await joinEvent("event-1", 1, mockPool);
 
       expect(result.success).toBe(false);
       expect(result.message).toContain("Aucune invitation");
@@ -102,7 +102,7 @@ describe("EventService - Unified Dependency Injection Tests", () => {
         rows: [{ id: "inv-1", status: "accepted", user_id: 1 }],
       });
 
-      const result = await joinEvent("event-1", 1, "test@test.com", mockPool);
+      const result = await joinEvent("event-1", 1, mockPool);
 
       expect(result.success).toBe(true);
       expect(result.message).toContain("déjà rejoint");
@@ -114,20 +114,49 @@ describe("EventService - Unified Dependency Injection Tests", () => {
         rows: [{ id: "inv-1", status: "accepted", user_id: 2 }],
       });
 
-      const result = await joinEvent("event-1", 1, "test@test.com", mockPool);
+      const result = await joinEvent("event-1", 1, "inv-1", mockPool);
 
       expect(result.success).toBe(false);
       expect(result.message).toContain("déjà été utilisée");
       expect(mockPoolQuery).toHaveBeenCalledTimes(1);
     });
 
-    it("should successfully join an event", async () => {
+    it("should successfully join an event with token", async () => {
       mockPoolQuery.mockResolvedValueOnce({
         rows: [{ id: "inv-1", status: "pending" }],
       }); // Find invitation
       mockPoolQuery.mockResolvedValueOnce({ rowCount: 1 }); // Update invitation
 
-      const result = await joinEvent("event-1", 1, "test@test.com", mockPool);
+      const result = await joinEvent("event-1", 1, "inv-1", mockPool);
+
+      expect(result.success).toBe(true);
+      expect(mockPoolQuery).toHaveBeenCalledTimes(2);
+    });
+
+    it("should fail when invitation token is already used by another user", async () => {
+      mockPoolQuery.mockResolvedValueOnce({
+        rows: [{ id: "inv-token-1", status: "accepted", user_id: 7 }],
+      });
+
+      const result = await joinEvent("event-1", 1, "inv-token-1", mockPool);
+
+      expect(result.success).toBe(false);
+      expect(result.message).toContain("déjà été utilisée");
+      expect(mockPoolQuery).toHaveBeenNthCalledWith(
+        1,
+        "SELECT * FROM invitations WHERE id = $1 AND event_id = $2",
+        ["inv-token-1", "event-1"]
+      );
+      expect(mockPoolQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("should join using invitation token", async () => {
+      mockPoolQuery.mockResolvedValueOnce({
+        rows: [{ id: "inv-token-1", status: "pending" }],
+      });
+      mockPoolQuery.mockResolvedValueOnce({ rowCount: 1 });
+
+      const result = await joinEvent("event-1", 1, "inv-token-1", mockPool);
 
       expect(result.success).toBe(true);
       expect(mockPoolQuery).toHaveBeenCalledTimes(2);

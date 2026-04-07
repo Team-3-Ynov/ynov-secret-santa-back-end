@@ -28,14 +28,7 @@ import {
   markInvitationNotificationAsRead,
   updateInvitationNotificationStatus,
 } from "../services/notification.service";
-import { signInvitationToken, verifyInvitationToken } from "../utils/jwt.utils";
-
-const joinEventForUser = (
-  eventId: string,
-  userId: number,
-  email: string,
-  invitationId?: string
-) => joinEvent(eventId, userId, email, undefined, invitationId);
+import { signInvitationToken } from "../utils/jwt.utils";
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
@@ -201,10 +194,9 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
       });
     }
 
-    // Envoyer l'email
-    // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre, transmis côté frontend via fragment)
-    const joinLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/events/${eventIdStr}/join#token=${encodeURIComponent(invitationToken)}`;
-    await sendInvitationEmail(parsed.data.email, 'Secret Santa Event', joinLink);
+    // Envoyer l'email avec un token d'invitation dans l'URL pour le flux frontend.
+    const joinLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/events/${eventIdStr}/join?token=${encodeURIComponent(invitation.id)}`;
+    await sendInvitationEmail(parsed.data.email, "Secret Santa Event", joinLink);
 
     res.status(201).json(invitation);
   } catch (error) {
@@ -216,41 +208,17 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
 export const joinEventHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId } = req.params;
-    const userId = (req as any).user.id;
-    const email = (req as any).user.email;
-    const tokenFromBody = typeof req.body?.token === 'string' ? req.body.token : null;
-    const tokenFromQuery = typeof req.query?.token === 'string' ? req.query.token : null;
-    const rawToken = tokenFromBody || tokenFromQuery;
-    const invitationToken = rawToken?.trim() || null;
+    const userId = (req as AuthenticatedRequest).user.id;
+    const tokenFromBody = typeof req.body?.token === "string" ? req.body.token : null;
+    const tokenFromQuery = typeof req.query?.token === "string" ? req.query.token : null;
+    const normalizedToken = (tokenFromBody || tokenFromQuery)?.trim();
+    const invitationToken =
+      normalizedToken && normalizedToken !== "undefined" && normalizedToken !== "null"
+        ? normalizedToken
+        : undefined;
 
-    let invitationId: string | undefined;
-    let effectiveEmail = email;
-
-    if (invitationToken && invitationToken !== 'undefined' && invitationToken !== 'null') {
-      const tokenPayload = verifyInvitationToken(invitationToken);
-
-      if (!tokenPayload) {
-        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(invitationToken);
-        if (isUuid) {
-          invitationId = invitationToken;
-        } else {
-          return res.status(400).json({ success: false, message: 'Token d\'invitation invalide ou expiré.' });
-        }
-      } else {
-        if (tokenPayload.eventId !== eventId) {
-          return res.status(400).json({ success: false, message: 'Token d\'invitation invalide pour cet événement.' });
-        }
-
-        if (tokenPayload.email.toLowerCase() !== String(email).toLowerCase()) {
-          return res.status(403).json({ success: false, message: 'Ce token d\'invitation ne correspond pas à votre compte.' });
-        }
-
-        invitationId = tokenPayload.invitationId;
-        effectiveEmail = tokenPayload.email;
-      }
-    }
-
-    const result = await joinEventForUser(eventId, userId, effectiveEmail, invitationId);
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const result = await joinEvent(eventIdStr, userId, invitationToken);
 
     const { statusCode, ...responseBody } = result as any;
     if (!result.success) {
