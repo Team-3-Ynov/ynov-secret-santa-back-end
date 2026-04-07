@@ -4,10 +4,10 @@
  * à partir des routes Express et des contrôleurs
  */
 
-import fs from "fs/promises";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { glob } from "glob";
-import path from "path";
-import { fileURLToPath } from "url";
 import YAML from "yaml";
 
 // Convertir __dirname pour ES modules
@@ -32,22 +32,11 @@ interface OpenAPISpec {
     name: string;
     description: string;
   }>;
-  paths: Record<string, any>;
+  paths: Record<string, unknown>;
   components: {
-    securitySchemes: Record<string, any>;
-    schemas: Record<string, any>;
+    securitySchemes: Record<string, unknown>;
+    schemas: Record<string, unknown>;
   };
-}
-
-interface RouteInfo {
-  path: string;
-  method: string;
-  tags: string[];
-  summary: string;
-  description?: string;
-  security?: any[];
-  requestBody?: any;
-  responses: Record<string, any>;
 }
 
 async function generateOpenAPISpec(): Promise<OpenAPISpec> {
@@ -106,7 +95,6 @@ async function loadSchemas(spec: OpenAPISpec): Promise<void> {
   const schemaFiles = await glob(path.join(__dirname, "../src/schemas/**/*.ts"));
 
   for (const file of schemaFiles) {
-    const content = await fs.readFile(file, "utf-8");
     const filename = path.basename(file, ".ts");
 
     // Analyser le contenu pour extraire les interfaces
@@ -267,7 +255,6 @@ async function analyzeRoutes(spec: OpenAPISpec): Promise<void> {
   const routeFiles = await glob(path.join(__dirname, "../src/routes/**/*.ts"));
 
   for (const file of routeFiles) {
-    const content = await fs.readFile(file, "utf-8");
     const filename = path.basename(file, ".ts");
 
     // Analyser le contenu pour extraire les routes

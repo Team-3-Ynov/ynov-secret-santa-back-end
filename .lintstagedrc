@@ -1,8 +1,8 @@
 {
   "*.{ts,tsx,js,jsx}": [
     "pnpm lint",
-    "pnpm typecheck",
-    "semgrep scan --config auto --quiet"
+    "sh -c 'pnpm typecheck'",
+    "sh -c '\"$(dirname \"$(python3 -c \"import os,sys; print(os.path.realpath(sys.executable))\")\")/semgrep\" scan --config auto --quiet'"
   ],
   "*.{md,json,yaml,yml}": [
     "pnpm lint"
