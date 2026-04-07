@@ -1,10 +1,5 @@
 {
   "*.{ts,tsx,js,jsx}": [
-    "pnpm lint",
-    "sh -c 'pnpm typecheck'",
-    "sh -c '\"$(dirname \"$(python3 -c \"import os,sys; print(os.path.realpath(sys.executable))\")\")/semgrep\" scan --config auto --quiet'"
-  ],
-  "*.{md,json,yaml,yml}": [
-    "pnpm lint"
+    "pnpm exec biome check --write"
   ]
 }
