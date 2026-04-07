@@ -276,6 +276,7 @@ describe("EventService - Unified Dependency Injection Tests", () => {
         }) // participants with user info
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
         .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // exclusions
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // affinities (none)
         .mockResolvedValueOnce({
           rows: [{ id: "a1", giver_id: 1, receiver_id: 2 }],
           rowCount: 1,
@@ -319,6 +320,7 @@ describe("EventService - Unified Dependency Injection Tests", () => {
           rows: [{ giver_id: 1, receiver_id: 2 }],
           rowCount: 1,
         }) // exclusions
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // affinities (none)
         .mockResolvedValueOnce({
           rows: [{ id: "a1", giver_id: 1, receiver_id: 3 }],
           rowCount: 1,
@@ -366,12 +368,141 @@ describe("EventService - Unified Dependency Injection Tests", () => {
           ],
           rowCount: 2,
         }) // exclusions - impossible to satisfy
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // affinities (none)
         .mockResolvedValueOnce({ command: "ROLLBACK" });
 
       await expect(performDraw("event-1", mockPool)).rejects.toThrow(
         "Impossible de trouver une assignation valide avec les exclusions actuelles. Trop de contraintes."
       );
       expect(mockClientQuery).toHaveBeenCalledWith("ROLLBACK");
+    });
+
+    it("should perform a draw with 'avoid' affinities respected (pass 1)", async () => {
+      // Participants: 1, 2, 3 — user 1 wants to avoid user 2
+      // Expected: 1 -> 3 (or 1 -> anything except 2)
+      mockClientQuery
+        .mockResolvedValueOnce({ command: "BEGIN" })
+        .mockResolvedValueOnce({ rows: [{ title: "Test Event" }] }) // event title
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 1, email: "u1@test.com", username: "user1" },
+            { user_id: 2, email: "u2@test.com", username: "user2" },
+            { user_id: 3, email: "u3@test.com", username: "user3" },
+          ],
+          rowCount: 3,
+        }) // participants
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // exclusions
+        .mockResolvedValueOnce({
+          rows: [{ giver_id: 1, target_id: 2, affinity: "avoid" }],
+          rowCount: 1,
+        }) // affinities: 1 avoids 2
+        .mockResolvedValueOnce({ rows: [{ id: "a1", giver_id: 1, receiver_id: 3 }] }) // insert 1→3
+        .mockResolvedValueOnce({ rows: [{ id: "a2", giver_id: 2, receiver_id: 1 }] }) // insert 2→1
+        .mockResolvedValueOnce({ rows: [{ id: "a3", giver_id: 3, receiver_id: 2 }] }) // insert 3→2
+        .mockResolvedValueOnce({ command: "COMMIT" });
+
+      const result = await performDraw("event-1", mockPool);
+
+      expect(result.assignments).toHaveLength(3);
+      // No warning: avoid constraint was satisfiable (pass 1 succeeded)
+      expect(result.warning).toBeUndefined();
+      expect(mockClientQuery).toHaveBeenCalledWith("COMMIT");
+    });
+
+    it("should fall back to pass 2 (relaxed) when 'avoid' makes draw impossible", async () => {
+      // Participants: 1, 2 — both avoid each other, but self-assignment is forbidden,
+      // so there is NO valid assignment if avoid is treated as exclusion.
+      // Pass 2 drops 'avoid', finds 1→2, 2→1 and sets relaxed=true → warning included.
+      mockClientQuery
+        .mockResolvedValueOnce({ command: "BEGIN" })
+        .mockResolvedValueOnce({ rows: [{ title: "Test Event" }] }) // event title
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 1, email: "u1@test.com", username: "user1" },
+            { user_id: 2, email: "u2@test.com", username: "user2" },
+          ],
+          rowCount: 2,
+        }) // participants
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // hard exclusions (none)
+        .mockResolvedValueOnce({
+          rows: [
+            { giver_id: 1, target_id: 2, affinity: "avoid" },
+            { giver_id: 2, target_id: 1, affinity: "avoid" },
+          ],
+          rowCount: 2,
+        }) // affinities: both avoid each other
+        .mockResolvedValueOnce({ rows: [{ id: "a1", giver_id: 1, receiver_id: 2 }] }) // insert 1→2
+        .mockResolvedValueOnce({ rows: [{ id: "a2", giver_id: 2, receiver_id: 1 }] }) // insert 2→1
+        .mockResolvedValueOnce({ command: "COMMIT" });
+
+      const result = await performDraw("event-1", mockPool);
+
+      expect(result.assignments).toHaveLength(2);
+      // warning must be present because 'avoid' constraints were relaxed
+      expect(result.warning).toBeDefined();
+      expect(result.warning).toContain("Éviter");
+      expect(mockClientQuery).toHaveBeenCalledWith("COMMIT");
+    });
+
+    it("should prioritize 'favorable' assignments when possible", async () => {
+      // Participants 1, 2, 3 — user 1 marks user 3 as favorable
+      // The algorithm should prefer 1→3 over 1→2
+      mockClientQuery
+        .mockResolvedValueOnce({ command: "BEGIN" })
+        .mockResolvedValueOnce({ rows: [{ title: "Test Event" }] }) // event title
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 1, email: "u1@test.com", username: "user1" },
+            { user_id: 2, email: "u2@test.com", username: "user2" },
+            { user_id: 3, email: "u3@test.com", username: "user3" },
+          ],
+          rowCount: 3,
+        }) // participants
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // exclusions
+        .mockResolvedValueOnce({
+          rows: [{ giver_id: 1, target_id: 3, affinity: "favorable" }],
+          rowCount: 1,
+        }) // affinities: 1 favors 3
+        .mockResolvedValueOnce({ rows: [{ id: "a1", giver_id: 1, receiver_id: 3 }] }) // insert 1→3
+        .mockResolvedValueOnce({ rows: [{ id: "a2", giver_id: 2, receiver_id: 1 }] }) // insert 2→1
+        .mockResolvedValueOnce({ rows: [{ id: "a3", giver_id: 3, receiver_id: 2 }] }) // insert 3→2
+        .mockResolvedValueOnce({ command: "COMMIT" });
+
+      const result = await performDraw("event-1", mockPool);
+
+      expect(result.assignments).toHaveLength(3);
+      expect(result.warning).toBeUndefined();
+      expect(mockClientQuery).toHaveBeenCalledWith("COMMIT");
+    });
+
+    it("should complete successfully when all affinities are neutral", async () => {
+      mockClientQuery
+        .mockResolvedValueOnce({ command: "BEGIN" })
+        .mockResolvedValueOnce({ rows: [{ title: "Test Event" }] }) // event title
+        .mockResolvedValueOnce({
+          rows: [
+            { user_id: 1, email: "u1@test.com", username: "user1" },
+            { user_id: 2, email: "u2@test.com", username: "user2" },
+          ],
+          rowCount: 2,
+        }) // participants
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // existing draw
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }) // exclusions
+        .mockResolvedValueOnce({
+          rows: [{ giver_id: 1, target_id: 2, affinity: "neutral" }],
+          rowCount: 1,
+        }) // affinities: all neutral (no special treatment)
+        .mockResolvedValueOnce({ rows: [{ id: "a1", giver_id: 1, receiver_id: 2 }] })
+        .mockResolvedValueOnce({ rows: [{ id: "a2", giver_id: 2, receiver_id: 1 }] })
+        .mockResolvedValueOnce({ command: "COMMIT" });
+
+      const result = await performDraw("event-1", mockPool);
+
+      expect(result.assignments).toHaveLength(2);
+      expect(result.warning).toBeUndefined();
     });
   });
 

@@ -10,6 +10,12 @@ import * as eventService from "../../src/services/event.service";
 
 vi.mock("../../src/services/event.service");
 
+vi.mock("../../src/config/database", () => ({
+  pool: {
+    query: vi.fn().mockResolvedValue({ rows: [] }),
+  },
+}));
+
 describe("Event Controller - Exclusions", () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;

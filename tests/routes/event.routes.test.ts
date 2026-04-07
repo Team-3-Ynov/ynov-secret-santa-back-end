@@ -33,6 +33,12 @@ vi.mock("../../src/models/user.model", () => ({
   },
 }));
 
+vi.mock("../../src/config/database", () => ({
+  pool: {
+    query: vi.fn().mockResolvedValue({ rows: [] }),
+  },
+}));
+
 // Mock de la couche service pour ne pas toucher la BDD
 const mockEvent = {
   id: "event-uuid-123",
@@ -108,6 +114,8 @@ vi.mock("../../src/services/event.service", () => ({
   getAssignment: vi.fn(),
   getEventsByUserId: vi.fn(),
   getEventParticipants: vi.fn(),
+  setAffinity: vi.fn(),
+  getAffinities: vi.fn(),
 }));
 
 describe("POST /api/events", () => {
@@ -611,5 +619,122 @@ describe("GET /api/events/:id/my-assignment", () => {
     const res = await request(app).get(`/api/events/${mockEvent.id}/my-assignment`);
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("PUT /api/events/:id/affinities/:targetId", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should set affinity and return 200", async () => {
+    const mockAffinity = {
+      id: 1,
+      event_id: mockEvent.id,
+      giver_id: 1,
+      target_id: 2,
+      affinity: "avoid",
+    };
+    (eventService.setAffinity as Mock).mockResolvedValue(mockAffinity);
+
+    const res = await request(app)
+      .put(`/api/events/${mockEvent.id}/affinities/2`)
+      .send({ affinity: "avoid" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.affinity).toBe("avoid");
+  });
+
+  it("should return 400 for an invalid affinity value", async () => {
+    const res = await request(app)
+      .put(`/api/events/${mockEvent.id}/affinities/2`)
+      .send({ affinity: "hate" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should return 400 for a non-numeric targetId", async () => {
+    const res = await request(app)
+      .put(`/api/events/${mockEvent.id}/affinities/not-a-number`)
+      .send({ affinity: "neutral" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should return 400 when service throws a participant error", async () => {
+    (eventService.setAffinity as Mock).mockRejectedValue(
+      new Error("Vous n'êtes pas un participant accepté de cet événement.")
+    );
+
+    const res = await request(app)
+      .put(`/api/events/${mockEvent.id}/affinities/2`)
+      .send({ affinity: "neutral" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should return 400 when service throws a draw-locked error", async () => {
+    (eventService.setAffinity as Mock).mockRejectedValue(
+      new Error("Le tirage a déjà été effectué. Les affinités ne peuvent plus être modifiées.")
+    );
+
+    const res = await request(app)
+      .put(`/api/events/${mockEvent.id}/affinities/2`)
+      .send({ affinity: "avoid" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("should return 500 on unexpected service error", async () => {
+    (eventService.setAffinity as Mock).mockRejectedValue(new Error("Unexpected DB failure"));
+
+    const res = await request(app)
+      .put(`/api/events/${mockEvent.id}/affinities/2`)
+      .send({ affinity: "favorable" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.success).toBe(false);
+  });
+});
+
+describe("GET /api/events/:id/affinities", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("should return affinities and return 200", async () => {
+    const mockAffinities = [
+      { id: 1, event_id: mockEvent.id, giver_id: 1, target_id: 2, affinity: "avoid" },
+    ];
+    (eventService.getAffinities as Mock).mockResolvedValue(mockAffinities);
+
+    const res = await request(app).get(`/api/events/${mockEvent.id}/affinities`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+  });
+
+  it("should return empty array when no affinities set", async () => {
+    (eventService.getAffinities as Mock).mockResolvedValue([]);
+
+    const res = await request(app).get(`/api/events/${mockEvent.id}/affinities`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
+  });
+
+  it("should return 500 on service error", async () => {
+    (eventService.getAffinities as Mock).mockRejectedValue(new Error("DB error"));
+
+    const res = await request(app).get(`/api/events/${mockEvent.id}/affinities`);
+
+    expect(res.status).toBe(500);
+    expect(res.body.success).toBe(false);
   });
 });
