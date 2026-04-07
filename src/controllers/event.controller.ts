@@ -162,9 +162,8 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
     const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
     const invitation = await createInvitation(eventIdStr, parsed.data.email);
 
-    // Envoyer l'email
-    // TODO: Générer un vrai lien (ex: token JWT unique pour rejoindre)
-    const joinLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/events/${eventId}/join`;
+    // Envoyer l'email avec un token d'invitation dans l'URL pour le flux frontend.
+    const joinLink = `${process.env.FRONTEND_URL || "http://localhost:3000"}/events/${eventIdStr}/join?token=${encodeURIComponent(invitation.id)}`;
     await sendInvitationEmail(parsed.data.email, "Secret Santa Event", joinLink);
 
     res.status(201).json(invitation);
@@ -178,10 +177,13 @@ export const joinEventHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId } = req.params;
     const userId = (req as AuthenticatedRequest).user.id;
-    const email = (req as AuthenticatedRequest).user.email;
+    const invitationToken =
+      typeof req.body?.token === "string" && req.body.token.trim().length > 0
+        ? req.body.token.trim()
+        : undefined;
 
     const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
-    const result = await joinEvent(eventIdStr, userId, email);
+    const result = await joinEvent(eventIdStr, userId, invitationToken);
 
     if (!result.success) {
       return res.status(400).json(result);
