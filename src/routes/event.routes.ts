@@ -7,6 +7,7 @@ import {
   deleteExclusionHandler,
   deleteInvitationHandler,
   drawEventHandler,
+  getAffinitiesHandler,
   getAssignmentHandler,
   getEventExclusionsHandler,
   getEventHandler,
@@ -15,6 +16,7 @@ import {
   getUserEventsHandler,
   inviteUserHandler,
   joinEventHandler,
+  setAffinityHandler,
   updateEventHandler,
 } from "../controllers/event.controller";
 import { authenticate } from "../middlewares/auth.middleware";
@@ -39,5 +41,7 @@ router.patch("/:id/exclusions", addExclusionHandler);
 router.get("/:id/exclusions", getEventExclusionsHandler);
 router.delete("/:id/exclusions/:exclusionId", deleteExclusionHandler);
 router.get("/:id/my-assignment", getAssignmentHandler);
+router.get("/:id/affinities", getAffinitiesHandler);
+router.put("/:id/affinities/:targetId", setAffinityHandler);
 
 export default router;

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { pool } from "../config/database";
+import type { AffinityRecord, AffinityValue } from "../models/affinity.model";
 import type { AssignmentRecord } from "../models/assignment.model";
 import type { EventRecord, NormalizedEventInput, UpdateEventInput } from "../models/event.model";
 import type { Exclusion } from "../models/exclusion.model";
@@ -238,13 +239,14 @@ export interface DrawNotification {
 export interface DrawResult {
   assignments: AssignmentRecord[];
   notifications: DrawNotification[];
+  warning?: string;
 }
 
 export const performDraw = async (
   eventId: string,
   clientPool: typeof pool = pool
 ): Promise<DrawResult> => {
-  const client = await clientPool.connect(); // Use the passed pool or default
+  const client = await clientPool.connect();
   try {
     await client.query("BEGIN");
 
@@ -285,7 +287,7 @@ export const performDraw = async (
       throw new Error("Un tirage a déjà été effectué pour cet événement.");
     }
 
-    // 4. Récupérer les exclusions
+    // 4. Récupérer les exclusions (contraintes dures)
     const exclusionsResult = await client.query<{
       giver_id: number;
       receiver_id: number;
@@ -298,16 +300,32 @@ export const performDraw = async (
       exclusions.get(ex.giver_id)?.push(ex.receiver_id);
     }
 
-    // 5. Tenter de trouver une assignation valide avec un algorithme de backtracking
-    const assignments = findValidAssignment(participants, exclusions);
+    // 5. Récupérer les affinités
+    const affinitiesResult = await client.query<{
+      giver_id: number;
+      target_id: number;
+      affinity: AffinityValue;
+    }>("SELECT giver_id, target_id, affinity FROM event_affinities WHERE event_id = $1", [eventId]);
+    const affinities = new Map<number, Map<number, AffinityValue>>();
+    for (const row of affinitiesResult.rows) {
+      if (!affinities.has(row.giver_id)) {
+        affinities.set(row.giver_id, new Map());
+      }
+      affinities.get(row.giver_id)?.set(row.target_id, row.affinity);
+    }
 
-    if (!assignments) {
+    // 6. Trouver une assignation valide (algorithme 3 passes)
+    const result = findValidAssignment(participants, exclusions, affinities);
+
+    if (!result) {
       throw new Error(
         "Impossible de trouver une assignation valide avec les exclusions actuelles. Trop de contraintes."
       );
     }
 
-    // 6. Sauvegarder les assignations et préparer les données de notification
+    const { assignments, relaxed } = result;
+
+    // 7. Sauvegarder les assignations et préparer les données de notification
     const insertedAssignments: AssignmentRecord[] = [];
     const notifications: DrawNotification[] = [];
 
@@ -321,7 +339,6 @@ export const performDraw = async (
       );
       insertedAssignments.push(res.rows[0]);
 
-      // Préparer les données pour les notifications / emails
       const giverInfo = userInfoMap.get(assignment.giver);
       const receiverInfo = userInfoMap.get(assignment.receiver);
       if (giverInfo && receiverInfo) {
@@ -336,7 +353,14 @@ export const performDraw = async (
     }
 
     await client.query("COMMIT");
-    return { assignments: insertedAssignments, notifications };
+    return {
+      assignments: insertedAssignments,
+      notifications,
+      ...(relaxed && {
+        warning:
+          "Certaines préférences 'Éviter' n'ont pas pu être respectées en raison de trop de contraintes.",
+      }),
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -345,99 +369,115 @@ export const performDraw = async (
   }
 };
 
+/**
+ * Bipartite matching with affinity support.
+ *
+ * Pass 1: treat 'avoid' as extra exclusions + prioritise 'favorable' neighbors
+ * Pass 2: drop 'avoid' constraints, keep 'favorable' priority (relaxed = true)
+ * Pass 3: ignore all affinities, only hard exclusions (last resort)
+ */
 function findValidAssignment(
   participants: number[],
-  exclusions: Map<number, number[]>
-): { giver: number; receiver: number }[] | null {
-  // We model the problem as a bipartite graph between givers (left side)
-  // and receivers (right side), both indexed over the participants array.
-  // We then compute a maximum matching; if it covers all givers, we build
-  // the corresponding assignments.
+  exclusions: Map<number, number[]>,
+  affinities: Map<number, Map<number, AffinityValue>>
+): { assignments: { giver: number; receiver: number }[]; relaxed: boolean } | null {
+  const runMatching = (
+    extraExclusions: Map<number, Set<number>>,
+    priorityMap: Map<number, Set<number>>
+  ): { giver: number; receiver: number }[] | null => {
+    const n = participants.length;
+    if (n === 0) return [];
 
-  const n = participants.length;
+    const receiverIndex = new Map<number, number>();
+    for (let i = 0; i < n; i++) {
+      receiverIndex.set(participants[i], i);
+    }
 
-  if (n === 0) {
-    return [];
-  }
+    const adjacency: number[][] = new Array(n);
+    for (let gi = 0; gi < n; gi++) {
+      const giverId = participants[gi];
+      const hardExcluded = new Set(exclusions.get(giverId) || []);
+      const softExcluded = extraExclusions.get(giverId) ?? new Set<number>();
+      const priority = priorityMap.get(giverId) ?? new Set<number>();
 
-  // Map receiver id -> index on the right side
-  const receiverIndex = new Map<number, number>();
-  for (let i = 0; i < n; i++) {
-    receiverIndex.set(participants[i], i);
-  }
+      const favNeighbors: number[] = [];
+      const normalNeighbors: number[] = [];
 
-  // Build adjacency list: for each giver index, list of allowed receiver indices
-  const adjacency: number[][] = new Array(n);
-  for (let gi = 0; gi < n; gi++) {
-    const giverId = participants[gi];
-    const giverExclusions = new Set(exclusions.get(giverId) || []);
-    const neighbors: number[] = [];
+      for (let ri = 0; ri < n; ri++) {
+        const receiverId = participants[ri];
+        if (giverId === receiverId) continue;
+        if (hardExcluded.has(receiverId)) continue;
+        if (softExcluded.has(receiverId)) continue;
 
+        if (priority.has(receiverId)) {
+          favNeighbors.push(ri);
+        } else {
+          normalNeighbors.push(ri);
+        }
+      }
+
+      // Favorable neighbors come first to guide the greedy augmentation
+      adjacency[gi] = [...favNeighbors, ...normalNeighbors];
+    }
+
+    const matchToReceiver: number[] = new Array(n).fill(-1);
+
+    const tryMatch = (giverIndex: number, seen: boolean[]): boolean => {
+      for (const receiverIdx of adjacency[giverIndex]) {
+        if (seen[receiverIdx]) continue;
+        seen[receiverIdx] = true;
+
+        const currentGiver = matchToReceiver[receiverIdx];
+        if (currentGiver === -1 || tryMatch(currentGiver, seen)) {
+          matchToReceiver[receiverIdx] = giverIndex;
+          return true;
+        }
+      }
+      return false;
+    };
+
+    for (let gi = 0; gi < n; gi++) {
+      const seen: boolean[] = new Array(n).fill(false);
+      if (!tryMatch(gi, seen)) return null;
+    }
+
+    const assignments: { giver: number; receiver: number }[] = [];
     for (let ri = 0; ri < n; ri++) {
-      const receiverId = participants[ri];
-
-      // Disallow self-giving and excluded receivers
-      if (giverId === receiverId) {
-        continue;
-      }
-      if (giverExclusions.has(receiverId)) {
-        continue;
-      }
-
-      neighbors.push(ri);
+      const gi = matchToReceiver[ri];
+      if (gi === -1) return null;
+      assignments.push({ giver: participants[gi], receiver: participants[ri] });
     }
+    return assignments;
+  };
 
-    adjacency[gi] = neighbors;
-  }
-
-  // matchToReceiver[ri] = giver index matched to receiver index ri, or -1 if free
-  const matchToReceiver: number[] = new Array(n).fill(-1);
-
-  function tryMatch(giverIndex: number, seen: boolean[]): boolean {
-    const neighbors = adjacency[giverIndex];
-
-    for (let k = 0; k < neighbors.length; k++) {
-      const receiverIdx = neighbors[k];
-
-      if (seen[receiverIdx]) {
-        continue;
+  // Build avoid / favorable sets from affinities
+  const avoidMap = new Map<number, Set<number>>();
+  const favorableMap = new Map<number, Set<number>>();
+  for (const [giverId, targets] of affinities) {
+    for (const [targetId, value] of targets) {
+      if (value === "avoid") {
+        if (!avoidMap.has(giverId)) avoidMap.set(giverId, new Set());
+        avoidMap.get(giverId)?.add(targetId);
+      } else if (value === "favorable") {
+        if (!favorableMap.has(giverId)) favorableMap.set(giverId, new Set());
+        favorableMap.get(giverId)?.add(targetId);
       }
-      seen[receiverIdx] = true;
-
-      const currentGiver = matchToReceiver[receiverIdx];
-      if (currentGiver === -1 || tryMatch(currentGiver, seen)) {
-        matchToReceiver[receiverIdx] = giverIndex;
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  // Run bipartite matching: each giver tries to find an augmenting path.
-  for (let gi = 0; gi < n; gi++) {
-    const seen: boolean[] = new Array(n).fill(false);
-    if (!tryMatch(gi, seen)) {
-      // No perfect matching exists under the constraints
-      return null;
     }
   }
 
-  // Build assignments from the matching
-  const assignments: { giver: number; receiver: number }[] = [];
-  for (let ri = 0; ri < n; ri++) {
-    const gi = matchToReceiver[ri];
-    if (gi === -1) {
-      // Should not happen if we confirmed a perfect matching above,
-      // but keep a safety check.
-      return null;
-    }
-    const giverId = participants[gi];
-    const receiverId = participants[ri];
-    assignments.push({ giver: giverId, receiver: receiverId });
-  }
+  // Pass 1: full affinity constraints (avoid as exclusion + favorable priority)
+  const pass1 = runMatching(avoidMap, favorableMap);
+  if (pass1) return { assignments: pass1, relaxed: false };
 
-  return assignments;
+  // Pass 2: drop avoid constraints, keep favorable priority
+  const pass2 = runMatching(new Map(), favorableMap);
+  if (pass2) return { assignments: pass2, relaxed: true };
+
+  // Pass 3: ignore all affinities
+  const pass3 = runMatching(new Map(), new Map());
+  if (pass3) return { assignments: pass3, relaxed: true };
+
+  return null;
 }
 
 export const getAssignment = async (
@@ -601,4 +641,61 @@ export const deleteExclusion = async (
     [exclusionId, eventId]
   );
   return (result.rowCount ?? 0) > 0;
+};
+
+export const setAffinity = async (
+  eventId: string,
+  giverId: number,
+  targetId: number,
+  affinity: AffinityValue,
+  clientPool: typeof pool = pool
+): Promise<AffinityRecord> => {
+  if (giverId === targetId) {
+    throw new Error("Vous ne pouvez pas définir une affinité envers vous-même.");
+  }
+
+  // Vérifier que le tirage n'a pas encore été effectué
+  const drawCheck = await clientPool.query(
+    "SELECT id FROM assignments WHERE event_id = $1 LIMIT 1",
+    [eventId]
+  );
+  if ((drawCheck.rowCount ?? 0) > 0) {
+    throw new Error("Le tirage a déjà été effectué. Les affinités ne peuvent plus être modifiées.");
+  }
+
+  // Vérifier que les deux utilisateurs sont des participants acceptés
+  const participantsCheck = await clientPool.query<{ user_id: number }>(
+    "SELECT user_id FROM invitations WHERE event_id = $1 AND user_id IN ($2, $3) AND status = 'accepted'",
+    [eventId, giverId, targetId]
+  );
+  const foundIds = participantsCheck.rows.map((r) => r.user_id);
+  if (!foundIds.includes(giverId)) {
+    throw new Error("Vous n'êtes pas un participant accepté de cet événement.");
+  }
+  if (!foundIds.includes(targetId)) {
+    throw new Error("Ce participant n'est pas un participant accepté de cet événement.");
+  }
+
+  const result = await clientPool.query<AffinityRecord>(
+    `INSERT INTO event_affinities (event_id, giver_id, target_id, affinity)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (event_id, giver_id, target_id)
+     DO UPDATE SET affinity = EXCLUDED.affinity, updated_at = NOW()
+     RETURNING *`,
+    [eventId, giverId, targetId, affinity]
+  );
+
+  return result.rows[0];
+};
+
+export const getAffinities = async (
+  eventId: string,
+  giverId: number,
+  clientPool: typeof pool = pool
+): Promise<AffinityRecord[]> => {
+  const result = await clientPool.query<AffinityRecord>(
+    "SELECT * FROM event_affinities WHERE event_id = $1 AND giver_id = $2",
+    [eventId, giverId]
+  );
+  return result.rows;
 };
