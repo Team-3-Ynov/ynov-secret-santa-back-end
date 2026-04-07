@@ -19,6 +19,7 @@ import {
   getEventInvitations,
   getEventParticipants,
   getEventsByUserId,
+  type InvitationActionResult,
   joinEvent,
   performDraw,
   updateEvent,
@@ -29,6 +30,10 @@ import {
   updateInvitationNotificationStatus,
 } from "../services/notification.service";
 import { signInvitationToken } from "../utils/jwt.utils";
+
+type RequestWithOptionalUsername = AuthenticatedRequest & {
+  user: AuthenticatedRequest["user"] & { username?: string };
+};
 
 export const createEventHandler = async (req: Request, res: Response) => {
   // L'utilisateur est authentifié, on récupère son ID
@@ -155,7 +160,7 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId } = req.params;
     const { email } = req.body;
-    const inviter = (req as any).user;
+    const inviter = (req as RequestWithOptionalUsername).user;
 
     const parsed = invitationSchema.safeParse({ email });
 
@@ -181,14 +186,14 @@ export const inviteUserHandler = async (req: Request, res: Response) => {
       const event = await findEventById(eventIdStr);
       await createNotification({
         userId: invitedUser.id,
-        type: 'invitation',
-        title: `Invitation - ${event?.title || 'Secret Santa'}`,
-        message: `${inviter?.username || inviter?.email || 'Un organisateur'} vous a invité(e) à rejoindre un Secret Santa.`,
+        type: "invitation",
+        title: `Invitation - ${event?.title || "Secret Santa"}`,
+        message: `${inviter?.username || inviter?.email || "Un organisateur"} vous a invité(e) à rejoindre un Secret Santa.`,
         metadata: {
           eventId: eventIdStr,
           invitationId: invitation.id,
           invitationToken,
-          invitationStatus: 'pending',
+          invitationStatus: "pending",
           invitedEmail: parsed.data.email,
         },
       });
@@ -218,15 +223,14 @@ export const joinEventHandler = async (req: Request, res: Response) => {
         : undefined;
 
     const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
-    const result = await joinEvent(eventIdStr, userId, invitationToken);
-
-    const { statusCode, ...responseBody } = result as any;
+    const result: InvitationActionResult = await joinEvent(eventIdStr, userId, invitationToken);
+    const { statusCode, ...responseBody } = result;
     if (!result.success) {
       return res.status(statusCode ?? 400).json(responseBody);
     }
 
     if (result.invitationId) {
-      await updateInvitationNotificationStatus(result.invitationId, userId, 'accepted');
+      await updateInvitationNotificationStatus(result.invitationId, userId, "accepted");
       await markInvitationNotificationAsRead(result.invitationId, userId);
     }
 
@@ -242,8 +246,9 @@ export const joinEventHandler = async (req: Request, res: Response) => {
 export const declineInvitationHandler = async (req: Request, res: Response) => {
   try {
     const { id: eventId, invitationId } = req.params;
-    const userId = (req as any).user.id;
-    const email = (req as any).user.email;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user.id;
+    const email = authReq.user.email;
 
     const result = await declineInvitation(eventId, invitationId, email);
 
@@ -253,7 +258,7 @@ export const declineInvitationHandler = async (req: Request, res: Response) => {
     }
 
     if (result.invitationId) {
-      await updateInvitationNotificationStatus(result.invitationId, userId, 'declined');
+      await updateInvitationNotificationStatus(result.invitationId, userId, "declined");
       await markInvitationNotificationAsRead(result.invitationId, userId);
     }
 
@@ -261,7 +266,9 @@ export const declineInvitationHandler = async (req: Request, res: Response) => {
     res.status(200).json(responseBody);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Erreur serveur lors de la tentative de refus de l\'invitation.' });
+    res
+      .status(500)
+      .json({ message: "Erreur serveur lors de la tentative de refus de l'invitation." });
   }
 };
 
