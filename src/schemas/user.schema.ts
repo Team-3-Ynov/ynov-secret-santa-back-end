@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { ALLOWED_PROFILE_IMAGES } from "../constants/profile-image";
+
+const profileImageSchema = z.enum(ALLOWED_PROFILE_IMAGES, {
+  error: "profile_image doit correspondre à l'un des avatars autorisés",
+});
 
 export const updateProfileSchema = z
   .object({
@@ -18,15 +23,17 @@ export const updateProfileSchema = z
       .optional(),
     first_name: z.string().max(100, "Le prénom ne peut pas dépasser 100 caractères").optional(),
     last_name: z.string().max(100, "Le nom ne peut pas dépasser 100 caractères").optional(),
+    profile_image: profileImageSchema.optional(),
   })
   .refine(
     (data) =>
       data.email !== undefined ||
       data.username !== undefined ||
       data.first_name !== undefined ||
-      data.last_name !== undefined,
+      data.last_name !== undefined ||
+      data.profile_image !== undefined,
     {
-      message: "Au moins un champ (email, username, prénom ou nom) doit être fourni",
+      message: "Au moins un champ (email, username, prénom, nom ou profile_image) doit être fourni",
     }
   );
 

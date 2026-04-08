@@ -33,6 +33,7 @@ const globalLimiter = rateLimit({
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // 10 tentatives max
+  skip: (req) => req.method === "OPTIONS",
   message: {
     success: false,
     message: "Trop de tentatives de connexion, réessayez dans 15 minutes.",
@@ -41,17 +42,42 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+const configuredOrigins = process.env.CORS_ORIGIN?.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = configuredOrigins?.length
+  ? configuredOrigins
+  : ["http://localhost:3000", "http://localhost:3001"];
+
+if (process.env.NODE_ENV !== "production" && !allowedOrigins.includes("http://localhost:3000")) {
+  allowedOrigins.push("http://localhost:3000");
+}
+
 const corsOptions: cors.CorsOptions = {
-  origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000", "http://localhost:3001"],
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(null, false);
+  },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
+  optionsSuccessStatus: 204,
 };
 
 // Sécurité : headers HTTP
 app.use(helmet());
 
 app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(express.json({ limit: "10kb" })); // Limite la taille des requêtes JSON
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 

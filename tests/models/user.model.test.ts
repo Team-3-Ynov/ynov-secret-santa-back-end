@@ -24,6 +24,7 @@ describe("UserModel", () => {
         email: "test@example.com",
         password: "plainPassword123",
         username: "testuser",
+        profile_image: "/avatars/avatar-1.svg",
       };
 
       const mockResult = {
@@ -32,6 +33,7 @@ describe("UserModel", () => {
             id: 1,
             email: userData.email,
             username: userData.username,
+            profile_image: userData.profile_image,
             created_at: new Date(),
             updated_at: new Date(),
           },
@@ -50,6 +52,7 @@ describe("UserModel", () => {
         userData.username,
         null,
         null,
+        userData.profile_image,
       ]);
       expect(result).toEqual(mockResult.rows[0]);
       expect(result).not.toHaveProperty("password");
@@ -62,6 +65,7 @@ describe("UserModel", () => {
         username: "namesuser",
         first_name: "John",
         last_name: "Doe",
+        profile_image: "/avatars/avatar-2.svg",
       };
 
       const mockResult = {
@@ -72,6 +76,7 @@ describe("UserModel", () => {
             username: userData.username,
             first_name: userData.first_name,
             last_name: userData.last_name,
+            profile_image: userData.profile_image,
             created_at: new Date(),
             updated_at: new Date(),
           },
@@ -89,6 +94,7 @@ describe("UserModel", () => {
         userData.username,
         "John",
         "Doe",
+        userData.profile_image,
       ]);
       expect(result).toEqual(mockResult.rows[0]);
     });
@@ -100,6 +106,7 @@ describe("UserModel", () => {
       email: "test@example.com",
       password: "hashed_password",
       username: "testuser",
+      profile_image: "/avatars/avatar-1.svg",
       created_at: new Date(),
       updated_at: new Date(),
     };
@@ -118,6 +125,7 @@ describe("UserModel", () => {
         id: mockUser.id,
         email: mockUser.email,
         username: mockUser.username,
+        profile_image: mockUser.profile_image,
         created_at: mockUser.created_at,
         updated_at: mockUser.updated_at,
       });
@@ -150,6 +158,7 @@ describe("UserModel", () => {
         id: 1,
         email: "test@example.com",
         username: "testuser",
+        profile_image: "/avatars/avatar-1.svg",
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -159,7 +168,7 @@ describe("UserModel", () => {
       const result = await UserModel.findById(1);
 
       expect(pool.query).toHaveBeenCalledWith(
-        "SELECT id, email, username, first_name, last_name, created_at, updated_at FROM users WHERE id = $1",
+        "SELECT id, email, username, first_name, last_name, profile_image, created_at, updated_at FROM users WHERE id = $1",
         [1]
       );
       expect(result).toEqual(mockUser);
@@ -293,6 +302,7 @@ describe("UserModel", () => {
         id: 7,
         email: "same@example.com",
         username: "same",
+        profile_image: "/avatars/avatar-1.svg",
         created_at: new Date(),
         updated_at: new Date(),
       });
@@ -311,6 +321,7 @@ describe("UserModel", () => {
         username: "new_user",
         first_name: "Neo",
         last_name: null,
+        profile_image: "/avatars/avatar-3.svg",
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -321,6 +332,7 @@ describe("UserModel", () => {
         username: "new_user",
         first_name: "Neo",
         last_name: "",
+        profile_image: "/avatars/avatar-3.svg",
       });
 
       expect(pool.query).toHaveBeenCalledWith(expect.stringContaining("UPDATE users"), [
@@ -328,6 +340,7 @@ describe("UserModel", () => {
         "new_user",
         "Neo",
         null,
+        "/avatars/avatar-3.svg",
         1,
       ]);
       expect(result).toEqual(updated);

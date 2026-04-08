@@ -1,4 +1,9 @@
 import { z } from "zod";
+import { ALLOWED_PROFILE_IMAGES } from "../constants/profile-image";
+
+const profileImageSchema = z.enum(ALLOWED_PROFILE_IMAGES, {
+  error: "L'image de profil doit correspondre à l'un des avatars autorisés",
+});
 
 export const registerSchema = z.object({
   email: z.email().min(1, "Email requis").max(255),
@@ -24,6 +29,7 @@ export const registerSchema = z.object({
     .min(1, "Le nom de famille ne peut pas être vide")
     .max(100)
     .optional(),
+  profile_image: profileImageSchema.optional(),
 });
 
 export const loginSchema = z.object({

@@ -1,3 +1,4 @@
+import { ALLOWED_PROFILE_IMAGES } from "../../src/constants/profile-image";
 import { loginSchema, registerSchema } from "../../src/schemas/auth.schema";
 
 describe("Auth Schemas", () => {
@@ -99,6 +100,30 @@ describe("Auth Schemas", () => {
 
       const result = registerSchema.safeParse(validData);
       expect(result.success).toBe(true);
+    });
+
+    it("should accept each allowed profile_image value", () => {
+      for (const profileImage of ALLOWED_PROFILE_IMAGES) {
+        const result = registerSchema.safeParse({
+          email: "test@example.com",
+          password: "Password123",
+          username: "testuser",
+          profile_image: profileImage,
+        });
+
+        expect(result.success).toBe(true);
+      }
+    });
+
+    it("should reject invalid profile_image value", () => {
+      const result = registerSchema.safeParse({
+        email: "test@example.com",
+        password: "Password123",
+        username: "testuser",
+        profile_image: "https://evil.com/avatar.png",
+      });
+
+      expect(result.success).toBe(false);
     });
   });
 

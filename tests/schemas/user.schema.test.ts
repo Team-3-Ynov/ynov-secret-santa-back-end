@@ -1,3 +1,4 @@
+import { ALLOWED_PROFILE_IMAGES } from "../../src/constants/profile-image";
 import { updatePasswordSchema, updateProfileSchema } from "../../src/schemas/user.schema";
 
 describe("user.schema", () => {
@@ -19,6 +20,18 @@ describe("user.schema", () => {
 
     it("should reject invalid username characters", () => {
       const result = updateProfileSchema.safeParse({ username: "bad-name!" });
+      expect(result.success).toBe(false);
+    });
+
+    it("should accept each allowed profile_image value", () => {
+      for (const profileImage of ALLOWED_PROFILE_IMAGES) {
+        const result = updateProfileSchema.safeParse({ profile_image: profileImage });
+        expect(result.success).toBe(true);
+      }
+    });
+
+    it("should reject invalid profile_image", () => {
+      const result = updateProfileSchema.safeParse({ profile_image: "../avatar.svg" });
       expect(result.success).toBe(false);
     });
   });

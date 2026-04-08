@@ -14,9 +14,9 @@ export const UserModel = {
     const hashedPassword = await bcrypt.hash(userData.password, SALT_ROUNDS);
 
     const query = `
-      INSERT INTO users (email, password, username, first_name, last_name)
-      VALUES ($1, $2, $3, $4, $5)
-      RETURNING id, email, username, first_name, last_name, created_at, updated_at
+      INSERT INTO users (email, password, username, first_name, last_name, profile_image)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, email, username, first_name, last_name, profile_image, created_at, updated_at
     `;
     const values = [
       userData.email,
@@ -24,6 +24,7 @@ export const UserModel = {
       userData.username,
       userData.first_name ?? null,
       userData.last_name ?? null,
+      userData.profile_image,
     ];
     const result = await pool.query(query, values);
     return result.rows[0];
@@ -56,7 +57,7 @@ export const UserModel = {
    */
   async findById(id: number): Promise<UserWithoutPassword | null> {
     const query =
-      "SELECT id, email, username, first_name, last_name, created_at, updated_at FROM users WHERE id = $1";
+      "SELECT id, email, username, first_name, last_name, profile_image, created_at, updated_at FROM users WHERE id = $1";
     const result = await pool.query(query, [id]);
     return result.rows[0] || null;
   },
@@ -134,6 +135,11 @@ export const UserModel = {
       values.push(data.last_name || null);
     }
 
+    if (data.profile_image !== undefined) {
+      fields.push(`profile_image = $${paramIndex++}`);
+      values.push(data.profile_image);
+    }
+
     if (fields.length === 0) {
       return this.findById(id);
     }
@@ -144,7 +150,7 @@ export const UserModel = {
       UPDATE users 
       SET ${fields.join(", ")}
       WHERE id = $${paramIndex}
-      RETURNING id, email, username, first_name, last_name, created_at, updated_at
+      RETURNING id, email, username, first_name, last_name, profile_image, created_at, updated_at
     `;
 
     const result = await pool.query(query, values);
