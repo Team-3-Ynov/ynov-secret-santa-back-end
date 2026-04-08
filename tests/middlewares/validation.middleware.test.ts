@@ -56,7 +56,7 @@ describe("Validation Middleware", () => {
     expect(jsonMock).toHaveBeenCalledWith(
       expect.objectContaining({
         success: false,
-        message: "Données invalides",
+        message: "Validation failed",
         errors: expect.arrayContaining([
           expect.objectContaining({
             field: "email",

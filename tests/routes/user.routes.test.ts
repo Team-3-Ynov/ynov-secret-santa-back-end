@@ -32,6 +32,7 @@ const mockMe = {
   id: 1,
   email: "test@example.com",
   username: "test_user",
+  profile_image: "/avatars/avatar-1.svg",
   created_at: new Date("2026-01-01"),
   updated_at: new Date("2026-01-01"),
 };
@@ -114,6 +115,35 @@ describe("PUT /api/users/me", () => {
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data.user.email).toBe("new@example.com");
+  });
+
+  it("should update profile_image when value is allowed", async () => {
+    const updatedUser = { ...mockMe, profile_image: "/avatars/avatar-4.svg" };
+    (userService.updateUserProfile as Mock).mockResolvedValue({
+      success: true,
+      user: updatedUser,
+    });
+
+    const res = await request(app)
+      .put("/api/users/me")
+      .send({ profile_image: "/avatars/avatar-4.svg" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.user.profile_image).toBe("/avatars/avatar-4.svg");
+    expect(userService.updateUserProfile).toHaveBeenCalledWith(1, {
+      profile_image: "/avatars/avatar-4.svg",
+    });
+  });
+
+  it("should return 400 when profile_image is invalid", async () => {
+    const res = await request(app)
+      .put("/api/users/me")
+      .send({ profile_image: "data:image/png;base64,abc" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toBe("Validation failed");
   });
 
   it("should return 400 if email is already taken", async () => {

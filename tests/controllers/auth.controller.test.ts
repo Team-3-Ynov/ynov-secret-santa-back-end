@@ -45,6 +45,7 @@ describe("AuthController", () => {
         id: 1,
         email: validRegistrationData.email,
         username: validRegistrationData.username,
+        profile_image: "/avatars/avatar-1.svg",
         created_at: new Date(),
         updated_at: new Date(),
       };
@@ -68,6 +69,7 @@ describe("AuthController", () => {
         email: validRegistrationData.email,
         password: validRegistrationData.password,
         username: validRegistrationData.username,
+        profile_image: "/avatars/avatar-1.svg",
       });
       expect(statusMock).toHaveBeenCalledWith(201);
       expect(jsonMock).toHaveBeenCalledWith({
@@ -125,6 +127,38 @@ describe("AuthController", () => {
         message: "Erreur serveur lors de l'inscription",
       });
     });
+
+    it("should pass explicit profile_image to UserModel.create", async () => {
+      const mockUser = {
+        id: 2,
+        email: validRegistrationData.email,
+        username: validRegistrationData.username,
+        profile_image: "/avatars/avatar-5.svg",
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+      mockRequest.body = {
+        ...validRegistrationData,
+        profile_image: "/avatars/avatar-5.svg",
+      };
+
+      (UserModel.emailExists as Mock).mockResolvedValue(false);
+      (UserModel.usernameExists as Mock).mockResolvedValue(false);
+      (UserModel.create as Mock).mockResolvedValue(mockUser);
+      (RefreshTokenModel.create as Mock).mockResolvedValue({ token: "mock-refresh-token" });
+      (jwtUtils.signAccessToken as Mock).mockReturnValue("mock-jwt-token");
+      (jwtUtils.signRefreshToken as Mock).mockReturnValue("mock-refresh-token");
+
+      await AuthController.register(mockRequest as Request, mockResponse as Response);
+
+      expect(UserModel.create).toHaveBeenCalledWith({
+        email: validRegistrationData.email,
+        password: validRegistrationData.password,
+        username: validRegistrationData.username,
+        profile_image: "/avatars/avatar-5.svg",
+      });
+      expect(statusMock).toHaveBeenCalledWith(201);
+    });
   });
 
   describe("login", () => {
@@ -139,6 +173,7 @@ describe("AuthController", () => {
       username: "testuser",
       first_name: "John",
       last_name: "Doe",
+      profile_image: "/avatars/avatar-2.svg",
       created_at: new Date(),
       updated_at: new Date(),
     };
@@ -224,6 +259,7 @@ describe("AuthController", () => {
         id: 1,
         email: "test@example.com",
         username: "testuser",
+        profile_image: "/avatars/avatar-3.svg",
         created_at: new Date(),
         updated_at: new Date(),
       };

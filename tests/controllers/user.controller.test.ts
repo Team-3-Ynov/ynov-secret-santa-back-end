@@ -65,7 +65,12 @@ describe("user.controller", () => {
   });
 
   it("getMeHandler should return user", async () => {
-    const user = { id: 1, email: "john@example.com", username: "john" };
+    const user = {
+      id: 1,
+      email: "john@example.com",
+      username: "john",
+      profile_image: "/avatars/avatar-2.svg",
+    };
     (UserModel.findById as Mock).mockResolvedValue(user);
 
     await getMeHandler(req as Request, res as Response);
@@ -86,8 +91,8 @@ describe("user.controller", () => {
   });
 
   it("updateProfileHandler should return 200 on success", async () => {
-    const updated = { id: 1, username: "neo" };
-    req.body = { username: "neo" };
+    const updated = { id: 1, username: "neo", profile_image: "/avatars/avatar-4.svg" };
+    req.body = { username: "neo", profile_image: "/avatars/avatar-4.svg" };
     (userService.updateUserProfile as Mock).mockResolvedValue({ success: true, user: updated });
 
     await updateProfileHandler(req as Request, res as Response);

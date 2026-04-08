@@ -5,6 +5,7 @@ export interface User {
   username: string;
   first_name?: string;
   last_name?: string;
+  profile_image: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -15,6 +16,7 @@ export interface UserWithoutPassword {
   username: string;
   first_name?: string;
   last_name?: string;
+  profile_image: string;
   created_at: Date;
   updated_at: Date;
 }
@@ -25,6 +27,7 @@ export interface CreateUserDTO {
   username: string;
   first_name?: string;
   last_name?: string;
+  profile_image: string;
 }
 
 export interface UpdateUserDTO {
@@ -32,6 +35,7 @@ export interface UpdateUserDTO {
   username?: string;
   first_name?: string;
   last_name?: string;
+  profile_image?: string;
 }
 
 export interface LoginDTO {

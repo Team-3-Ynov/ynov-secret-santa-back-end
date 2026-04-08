@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { DEFAULT_PROFILE_IMAGE } from "../constants/profile-image";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware";
 import { RefreshTokenModel } from "../models/refresh_token.model";
 import { UserModel } from "../models/user.model";
@@ -13,7 +14,8 @@ export const AuthController = {
    */
   async register(req: Request, res: Response): Promise<void> {
     try {
-      const { email, password, username, first_name, last_name }: RegisterInput = req.body;
+      const { email, password, username, first_name, last_name, profile_image }: RegisterInput =
+        req.body;
 
       // Vérifications existantes...
       const emailExists = await UserModel.emailExists(email);
@@ -38,6 +40,7 @@ export const AuthController = {
         username,
         first_name,
         last_name,
+        profile_image: profile_image ?? DEFAULT_PROFILE_IMAGE,
       });
 
       // Génération des tokens
@@ -90,6 +93,7 @@ export const AuthController = {
         username: user.username,
         first_name: user.first_name,
         last_name: user.last_name,
+        profile_image: user.profile_image,
         created_at: user.created_at,
         updated_at: user.updated_at,
       };
