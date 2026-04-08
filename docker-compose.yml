@@ -57,6 +57,7 @@ services:
       dockerfile: docker/Dockerfile
     container_name: secret_santa_backend
     profiles: [all]
+    env_file: ".env"
     environment:
       - NODE_ENV=${NODE_ENV:-production}
       - PORT=3000
@@ -68,6 +69,11 @@ services:
       - JWT_SECRET=${JWT_SECRET:?JWT_SECRET is required}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:3000,http://localhost:3001,http://localhost:8081,http://localhost}
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=${SMTP_PORT:-1025}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-Secret Santa <noreply@secretsanta.com>}
     depends_on:
       postgres:
         condition: service_healthy

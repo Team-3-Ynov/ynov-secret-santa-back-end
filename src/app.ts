@@ -14,10 +14,13 @@ import userRoutes from "./routes/user.routes";
 
 const app: Express = express();
 
+// Trust the first proxy (nginx) so express-rate-limit can read X-Forwarded-For correctly
+app.set("trust proxy", 1);
+
 // Rate limiting global
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requêtes par IP
+  max: 500, // 500 requêtes par IP
   message: {
     success: false,
     message: "Trop de requêtes, réessayez plus tard.",
@@ -117,7 +120,11 @@ app.get("/health", async (_, res) => {
   }
 });
 
-app.use("/api/auth", authLimiter, authRoutes);
+// Strict limiter only on write/sensitive auth actions, not on /me or /refresh
+app.use("/api/auth/login", authLimiter);
+app.use("/api/auth/register", authLimiter);
+app.use("/api/auth/logout", authLimiter);
+app.use("/api/auth", authRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/notifications", notificationRoutes);

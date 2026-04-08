@@ -1,5 +1,7 @@
 import type { Request, Response } from "express";
+import { pool } from "../config/database";
 import type { AuthenticatedRequest } from "../middlewares/auth.middleware";
+import { setAffinitySchema } from "../models/affinity.model";
 import { updateEventSchema, validateEventInput } from "../models/event.model";
 import { invitationSchema } from "../models/invitation.model";
 import { UserModel } from "../models/user.model";
@@ -14,6 +16,7 @@ import {
   deleteInvitation,
   findEventById,
   findInvitationById,
+  getAffinities,
   getAssignment,
   getEventExclusions,
   getEventInvitations,
@@ -22,6 +25,7 @@ import {
   type InvitationActionResult,
   joinEvent,
   performDraw,
+  setAffinity,
   updateEvent,
 } from "../services/event.service";
 import {
@@ -29,17 +33,17 @@ import {
   markInvitationNotificationAsRead,
   updateInvitationNotificationStatus,
 } from "../services/notification.service";
-import { signInvitationToken } from "../utils/jwt.utils";
+import { signInvitationToken, verifyInvitationToken } from "../utils/jwt.utils";
 
 type RequestWithOptionalUsername = AuthenticatedRequest & {
   user: AuthenticatedRequest["user"] & { username?: string };
 };
 
 export const createEventHandler = async (req: Request, res: Response) => {
-  // L'utilisateur est authentifié, on récupère son ID
   const userId = (req as AuthenticatedRequest).user?.id;
+  const userEmail = (req as AuthenticatedRequest).user?.email;
 
-  if (!userId) {
+  if (!userId || !userEmail) {
     return res.status(401).json({ success: false, message: "Unauthorized" });
   }
 
@@ -49,7 +53,6 @@ export const createEventHandler = async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, errors });
   }
 
-  // Combiner les données validées avec l'ownerId
   const eventData = {
     ...normalizedData,
     ownerId: userId,
@@ -57,6 +60,15 @@ export const createEventHandler = async (req: Request, res: Response) => {
 
   try {
     const event = await createEvent(eventData);
+
+    // Auto-join the organizer as an accepted participant
+    await pool.query(
+      `INSERT INTO invitations (id, event_id, email, status, user_id)
+       VALUES (gen_random_uuid(), $1, $2, 'accepted', $3)
+       ON CONFLICT (event_id, email) DO NOTHING`,
+      [event.id, userEmail, userId]
+    );
+
     return res.status(201).json({ success: true, data: event });
   } catch (error) {
     console.error("Erreur lors de la création de l'évènement:", error);
@@ -217,10 +229,19 @@ export const joinEventHandler = async (req: Request, res: Response) => {
     const tokenFromBody = typeof req.body?.token === "string" ? req.body.token : null;
     const tokenFromQuery = typeof req.query?.token === "string" ? req.query.token : null;
     const normalizedToken = (tokenFromBody || tokenFromQuery)?.trim();
-    const invitationToken =
+    const rawToken =
       normalizedToken && normalizedToken !== "undefined" && normalizedToken !== "null"
         ? normalizedToken
         : undefined;
+
+    // If the token is a JWT invitation token (from notifications), decode it to get the raw UUID
+    let invitationToken = rawToken;
+    if (rawToken) {
+      const decoded = verifyInvitationToken(rawToken);
+      if (decoded?.invitationId) {
+        invitationToken = decoded.invitationId;
+      }
+    }
 
     const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
     const result: InvitationActionResult = await joinEvent(eventIdStr, userId, invitationToken);
@@ -290,7 +311,7 @@ export const drawEventHandler = async (req: Request, res: Response) => {
       });
     }
 
-    const { assignments, notifications } = await performDraw(eventIdStr);
+    const { assignments, notifications, warning } = await performDraw(eventIdStr);
 
     // Envoyer les notifications en BDD ET les emails en parallèle
     await Promise.allSettled(
@@ -314,6 +335,7 @@ export const drawEventHandler = async (req: Request, res: Response) => {
       success: true,
       message: "Tirage effectué avec succès !",
       count: assignments.length,
+      ...(warning && { warning }),
     });
   } catch (error: unknown) {
     console.error(error);
@@ -584,5 +606,56 @@ export const deleteExclusionHandler = async (req: Request, res: Response) => {
       success: false,
       message: "Impossible de supprimer l'exclusion.",
     });
+  }
+};
+
+export const setAffinityHandler = async (req: Request, res: Response) => {
+  const { id: eventId, targetId } = req.params;
+  const userId = (req as AuthenticatedRequest).user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  const parsed = setAffinitySchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ success: false, errors: parsed.error.issues });
+  }
+
+  try {
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const targetIdNum = parseInt(Array.isArray(targetId) ? targetId[0] : targetId, 10);
+
+    if (Number.isNaN(targetIdNum)) {
+      return res.status(400).json({ success: false, message: "ID du participant invalide." });
+    }
+
+    const affinity = await setAffinity(eventIdStr, userId, targetIdNum, parsed.data.affinity);
+    return res.status(200).json({ success: true, data: affinity });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Erreur lors de la mise à jour de l'affinité.";
+    const status = message.includes("tirage") ? 400 : message.includes("participant") ? 400 : 500;
+    return res.status(status).json({ success: false, message });
+  }
+};
+
+export const getAffinitiesHandler = async (req: Request, res: Response) => {
+  const { id: eventId } = req.params;
+  const userId = (req as AuthenticatedRequest).user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ success: false, message: "Unauthorized" });
+  }
+
+  try {
+    const eventIdStr = Array.isArray(eventId) ? eventId[0] : eventId;
+    const affinities = await getAffinities(eventIdStr, userId);
+    return res.status(200).json({ success: true, data: affinities });
+  } catch (error) {
+    console.error("Erreur lors de la récupération des affinités:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Impossible de récupérer les affinités." });
   }
 };
