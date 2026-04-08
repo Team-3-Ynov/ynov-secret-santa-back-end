@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ALLOWED_PROFILE_IMAGES } from "../constants/profile-image";
 
 const profileImageSchema = z.enum(ALLOWED_PROFILE_IMAGES, {
-  error: "profile_image must be one of the allowed avatar paths",
+  error: "profile_image doit correspondre à l'un des avatars autorisés",
 });
 
 export const updateProfileSchema = z
